@@ -23,21 +23,21 @@ public class JwtService {
 
     public String generateAccessToken(User user) {
         return Jwts.builder()
-            .subject(user.getUsername())
+            .setSubject(user.getUsername())
             .claim("roles", user.getRoles()
                 .stream()
                 .map(Role::getName)
                 .toList())
-            .issuedAt(new Date())
-            .expiration(new Date(System.currentTimeMillis() + 15 * 60 * 1000))
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + 15 * 60 * 1000))
             .signWith(secretKey, SignatureAlgorithm.HS256)
             .compact();
     }
 
     public String generateRefreshToken(User user) {
         return Jwts.builder()
-            .subject(user.getUsername())
-            .expiration(new Date(System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000))
+            .setSubject(user.getUsername())
+            .setExpiration(new Date(System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000))
             .signWith(secretKey, SignatureAlgorithm.HS256)
             .compact();
     }

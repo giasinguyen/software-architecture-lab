@@ -2,6 +2,7 @@ package iuh.fit.NguyenTranGiaSi_22000715_JWT.config;
 
 import iuh.fit.NguyenTranGiaSi_22000715_JWT.entity.Role;
 import iuh.fit.NguyenTranGiaSi_22000715_JWT.entity.User;
+import iuh.fit.NguyenTranGiaSi_22000715_JWT.repository.RoleRepository;
 import iuh.fit.NguyenTranGiaSi_22000715_JWT.repository.UserRepository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -13,22 +14,28 @@ import java.util.Set;
 public class DataInitializer {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializer(UserRepository userRepository, 
+                          RoleRepository roleRepository,
+                          PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @PostConstruct
     public void init() {
         if (userRepository.count() == 0) {
-            // Create roles
+            // Create and save roles first
             Role adminRole = new Role();
             adminRole.setName("ROLE_ADMIN");
+            adminRole = roleRepository.save(adminRole);
 
             Role userRole = new Role();
             userRole.setName("ROLE_USER");
+            userRole = roleRepository.save(userRole);
 
             // Create admin user
             User admin = new User();
