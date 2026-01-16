@@ -1,3 +1,19 @@
 spring:
   application:
-    name: NguyenTranGiaSi_22000715_JWT
+      name: NguyenTranGiaSi_22000715_JWT
+  datasource:
+    url: jdbc:mariadb://localhost:3306/jwt_db
+    username: root
+    password: sapassword
+    driver-class-name: org.mariadb.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  secret: MySecretKeyForJWTTokenGenerationAndValidationMustBeLongerThan256Bits
+
+server:
+  port: 8080
