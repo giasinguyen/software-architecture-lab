@@ -1,0 +1,19 @@
+spring:
+  cache:
+    type: redis
+
+  data:
+    redis:
+      host: giving-elephant-6986.upstash.io
+      port: 6379
+      username: default
+      password: ARtKAAImcDI3ZjQxZGFlNTRkNWE0ZDY2YjE3NGZlNTJkOTFlNmE1ZXAyNjk4Ng
+      ssl:
+        enabled: true
+      connect-timeout: 60000
+      timeout: 60000
+
+logging:
+  level:
+    org.springframework.cache: DEBUG
+    org.springframework.data.redis: DEBUG
