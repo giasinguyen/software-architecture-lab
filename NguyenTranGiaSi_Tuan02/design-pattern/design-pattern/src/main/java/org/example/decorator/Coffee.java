@@ -1,2 +1,6 @@
-package org.example.decorator;public interface Coffee {
+package org.example.decorator;
+
+public interface Coffee {
+    String getDescription();
+    int cost();
 }

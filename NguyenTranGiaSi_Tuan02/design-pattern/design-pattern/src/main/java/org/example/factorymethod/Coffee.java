@@ -1,2 +1,5 @@
-package org.example.factorymethod;public interface Coffee {
+package org.example.factorymethod;
+
+public interface Coffee {
+    void brew();
 }
