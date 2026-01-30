@@ -1,10 +1,11 @@
+package com.iuh.fit;
 
-import decorator.*;
-import factory.Book;
-import factory.BookFactory;
-import observer.Librarian;
-import singleton.Library;
-import strategy.SearchByTitle;
+import com.iuh.fit.decorator.*;
+import com.iuh.fit.factory.Book;
+import com.iuh.fit.factory.BookFactory;
+import com.iuh.fit.observer.Librarian;
+import com.iuh.fit.singleton.Library;
+import com.iuh.fit.strategy.SearchByTitle;
 
 public class Main {
     public static void main(String[] args) {

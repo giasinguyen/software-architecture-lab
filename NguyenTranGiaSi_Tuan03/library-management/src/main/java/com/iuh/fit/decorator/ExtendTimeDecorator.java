@@ -1,4 +1,4 @@
-package decorator;
+package com.iuh.fit.decorator;
 
 public class ExtendTimeDecorator extends BorrowDecorator {
     public ExtendTimeDecorator(Borrow borrow) {

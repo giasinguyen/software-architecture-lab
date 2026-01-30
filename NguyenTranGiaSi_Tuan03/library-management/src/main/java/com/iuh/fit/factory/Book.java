@@ -1,4 +1,4 @@
-package factory;
+package com.iuh.fit.factory;
 
 public interface Book {
     String getTitle();

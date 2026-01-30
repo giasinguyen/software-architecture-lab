@@ -1,4 +1,4 @@
-package factory;
+package com.iuh.fit.factory;
 
 public class BookFactory {
     public static Book createBook(String type, String title, String author, String category) {

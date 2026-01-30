@@ -1,4 +1,4 @@
-package factory;
+package com.iuh.fit.factory;
 
 public class PaperBook implements Book {
     private String title, author, category;

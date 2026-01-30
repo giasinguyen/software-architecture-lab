@@ -1,6 +1,6 @@
-package strategy;
+package com.iuh.fit.strategy;
 
-import factory.Book;
+import com.iuh.fit.factory.Book;
 import java.util.List;
 
 public interface SearchStrategy {

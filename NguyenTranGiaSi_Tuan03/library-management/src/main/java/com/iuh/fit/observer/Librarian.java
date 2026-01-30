@@ -1,4 +1,4 @@
-package observer;
+package com.iuh.fit.observer;
 
 public class Librarian implements Observer {
     private String name;

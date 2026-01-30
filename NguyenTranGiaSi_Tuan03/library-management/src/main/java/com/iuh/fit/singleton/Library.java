@@ -1,8 +1,8 @@
-package singleton;
+package com.iuh.fit.singleton;
 
-import factory.Book;
-import observer.Observer;
-import observer.Subject;
+import com.iuh.fit.factory.Book;
+import com.iuh.fit.observer.Observer;
+import com.iuh.fit.observer.Subject;
 
 import java.util.ArrayList;
 import java.util.List;
