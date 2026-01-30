@@ -1,4 +1,4 @@
-package org.example;
+package org.iuh.fit;
 
 import java.util.ArrayList;
 import java.util.List;

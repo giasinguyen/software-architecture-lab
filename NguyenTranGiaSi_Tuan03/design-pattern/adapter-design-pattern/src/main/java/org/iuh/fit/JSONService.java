@@ -1,2 +1,6 @@
-package org.iuh.fit;public class JsonService {
+package org.iuh.fit;
+
+public interface JSONService {
+    void sendJSON(String jsonData);
 }
+

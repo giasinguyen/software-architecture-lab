@@ -1,4 +1,4 @@
-package org.example;
+package org.iuh.fit;
 
 public class File implements FileSystemComponent {
     private String name;

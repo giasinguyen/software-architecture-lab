@@ -1,2 +1,6 @@
-package org.iuh.fit;public class Observer {
+package org.iuh.fit;
+
+public interface Observer {
+    void update(String message);
 }
+
