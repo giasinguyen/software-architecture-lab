@@ -1,0 +1,281 @@
+{
+	"info": {
+		"_postman_id": "resilience4j-demo-collection",
+		"name": "🛡️ Resilience4j Demo",
+		"description": "Collection để test các cơ chế Fault Tolerance của Resilience4j:\n- Retry\n- Circuit Breaker\n- Rate Limiter\n- Bulkhead\n\n**Hướng dẫn:**\n1. Chạy Provider Service (port 8081) trước\n2. Chạy Client Service (port 8080)\n3. Test các endpoint theo thứ tự",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "client_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "provider_url",
+			"value": "http://localhost:8081",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "📦 Provider Service (Port 8081)",
+			"description": "Các endpoint của Provider - Service B",
+			"item": [
+				{
+					"name": "1. Get Data (Luôn thành công)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/provider/data",
+							"host": ["{{provider_url}}"],
+							"path": ["api", "provider", "data"]
+						},
+						"description": "Endpoint luôn trả về dữ liệu thành công.\nDùng để test happy path."
+					}
+				},
+				{
+					"name": "2. Unstable (50% lỗi random)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/provider/unstable",
+							"host": ["{{provider_url}}"],
+							"path": ["api", "provider", "unstable"]
+						},
+						"description": "Endpoint có 50% xác suất trả về lỗi 500.\nDùng để test RETRY pattern."
+					}
+				},
+				{
+					"name": "3. Slow (Delay n giây)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/provider/slow?delaySeconds=3",
+							"host": ["{{provider_url}}"],
+							"path": ["api", "provider", "slow"],
+							"query": [
+								{
+									"key": "delaySeconds",
+									"value": "3",
+									"description": "Số giây delay (mặc định 3)"
+								}
+							]
+						},
+						"description": "Endpoint delay n giây trước khi trả kết quả.\nDùng để test BULKHEAD và timeout."
+					}
+				},
+				{
+					"name": "4. Always Fail (Luôn lỗi 500)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/provider/always-fail",
+							"host": ["{{provider_url}}"],
+							"path": ["api", "provider", "always-fail"]
+						},
+						"description": "Endpoint LUÔN trả về lỗi 500.\nDùng để test CIRCUIT BREAKER pattern."
+					}
+				},
+				{
+					"name": "5. Get Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/provider/status",
+							"host": ["{{provider_url}}"],
+							"path": ["api", "provider", "status"]
+						},
+						"description": "Xem trạng thái Provider và số request đã nhận."
+					}
+				},
+				{
+					"name": "6. Reset Counter",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{provider_url}}/api/provider/reset",
+							"host": ["{{provider_url}}"],
+							"path": ["api", "provider", "reset"]
+						},
+						"description": "Reset bộ đếm request về 0 để bắt đầu demo lại."
+					}
+				}
+			]
+		},
+		{
+			"name": "🛡️ Client Service (Port 8080)",
+			"description": "Các endpoint của Client - Service A (có Resilience4j)",
+			"item": [
+				{
+					"name": "🔄 1. Test RETRY",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/api/client/retry",
+							"host": ["{{client_url}}"],
+							"path": ["api", "client", "retry"]
+						},
+						"description": "**Test RETRY Pattern**\n\nCách hoạt động:\n- Gọi Provider /unstable (50% lỗi)\n- Nếu lỗi → tự động retry (tối đa 3 lần, cách 2s)\n- Nếu hết retry → trả fallback\n\n**Quan sát:**\n- Xem log Client để thấy số lần retry\n- Response có thể là data thật hoặc fallback"
+					}
+				},
+				{
+					"name": "🔌 2. Test CIRCUIT BREAKER",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/api/client/circuit",
+							"host": ["{{client_url}}"],
+							"path": ["api", "client", "circuit"]
+						},
+						"description": "**Test CIRCUIT BREAKER Pattern**\n\nCách test:\n1. Gọi endpoint này 5-6 lần liên tục\n2. Quan sát trạng thái circuit trong response\n\nKết quả mong đợi:\n- Lần 1-3: Circuit CLOSED, gọi Provider (lỗi)\n- Lần 4-5: Circuit vẫn CLOSED, đếm lỗi\n- Lần 6+: Circuit OPEN, trả fallback NGAY (không gọi Provider)\n\n**Sau 10 giây:** Circuit chuyển HALF_OPEN"
+					}
+				},
+				{
+					"name": "⏱️ 3. Test RATE LIMITER",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/api/client/rate-limit",
+							"host": ["{{client_url}}"],
+							"path": ["api", "client", "rate-limit"]
+						},
+						"description": "**Test RATE LIMITER Pattern**\n\nCách test:\n- Click nhanh liên tục > 5 lần trong 10 giây\n- Hoặc dùng Postman Runner với 10 iterations\n\nKết quả mong đợi:\n- 5 request đầu: Thành công\n- Request 6+: Trả fallback (vượt quá 5 req/10s)\n- Sau 10 giây: Reset, cho phép 5 request mới"
+					}
+				},
+				{
+					"name": "🚢 4. Test BULKHEAD",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/api/client/bulkhead",
+							"host": ["{{client_url}}"],
+							"path": ["api", "client", "bulkhead"]
+						},
+						"description": "**Test BULKHEAD Pattern**\n\nCách test:\n- Mở 5 tab Postman và gọi đồng thời\n- Hoặc dùng Postman Runner với delay 0ms\n\nKết quả mong đợi:\n- 3 request đầu: Được xử lý (đợi 3 giây)\n- Request 4+: Trả fallback NGAY (vượt quá 3 concurrent)\n\n**Lưu ý:** Endpoint này delay 3 giây nên dễ quan sát"
+					}
+				},
+				{
+					"name": "🔗 5. Test COMBINED (Kết hợp)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/api/client/combined",
+							"host": ["{{client_url}}"],
+							"path": ["api", "client", "combined"]
+						},
+						"description": "**Test KẾT HỢP NHIỀU PATTERN**\n\nÁp dụng đồng thời:\n1. Rate Limiter (5 req/10s)\n2. Circuit Breaker (50% failure → OPEN)\n3. Retry (3 lần)\n\nThứ tự kiểm tra:\nRequest → Rate Limiter → Circuit Breaker → Retry → Provider"
+					}
+				},
+				{
+					"name": "📊 6. Xem Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/api/client/status",
+							"host": ["{{client_url}}"],
+							"path": ["api", "client", "status"]
+						},
+						"description": "Xem trạng thái hiện tại của Circuit Breaker:\n- state: CLOSED/OPEN/HALF_OPEN\n- failureRate: Tỷ lệ lỗi (%)\n- numberOfSuccessfulCalls: Số lần gọi thành công\n- numberOfFailedCalls: Số lần gọi thất bại"
+					}
+				},
+				{
+					"name": "🔄 7. Reset Circuit Breaker",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/api/client/reset",
+							"host": ["{{client_url}}"],
+							"path": ["api", "client", "reset"]
+						},
+						"description": "Reset Circuit Breaker về trạng thái CLOSED.\nDùng khi muốn demo lại từ đầu."
+					}
+				}
+			]
+		},
+		{
+			"name": "📈 Actuator Monitoring",
+			"description": "Các endpoint Actuator để monitor Resilience4j",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/actuator/health",
+							"host": ["{{client_url}}"],
+							"path": ["actuator", "health"]
+						},
+						"description": "Xem health status của tất cả components"
+					}
+				},
+				{
+					"name": "Circuit Breakers Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/actuator/circuitbreakers",
+							"host": ["{{client_url}}"],
+							"path": ["actuator", "circuitbreakers"]
+						},
+						"description": "Xem trạng thái tất cả Circuit Breakers"
+					}
+				},
+				{
+					"name": "Rate Limiters Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/actuator/ratelimiters",
+							"host": ["{{client_url}}"],
+							"path": ["actuator", "ratelimiters"]
+						},
+						"description": "Xem trạng thái tất cả Rate Limiters"
+					}
+				},
+				{
+					"name": "Retries Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/actuator/retries",
+							"host": ["{{client_url}}"],
+							"path": ["actuator", "retries"]
+						},
+						"description": "Xem trạng thái tất cả Retry configs"
+					}
+				},
+				{
+					"name": "Bulkheads Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{client_url}}/actuator/bulkheads",
+							"host": ["{{client_url}}"],
+							"path": ["actuator", "bulkheads"]
+						},
+						"description": "Xem trạng thái tất cả Bulkheads"
+					}
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,106 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# RESILIENCE CLIENT - SERVICE A
+# ═══════════════════════════════════════════════════════════════════════════
+# Service nhận request từ user và gọi sang Provider (Service B)
+# Áp dụng các cơ chế Resilience4j: Retry, Circuit Breaker, Rate Limiter, Bulkhead
+
+spring:
+  application:
+    name: resilience-client
+
+server:
+  port: 8080
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LOGGING - Để theo dõi hoạt động của Resilience4j
+# ═══════════════════════════════════════════════════════════════════════════
+logging:
+  level:
+    com.iuh.fit: DEBUG
+    io.github.resilience4j: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ACTUATOR - Expose endpoints để monitor Resilience4j
+# ═══════════════════════════════════════════════════════════════════════════
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers,ratelimiters,bulkheads,retries
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RESILIENCE4J CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════════════
+
+resilience4j:
+  
+  # ─────────────────────────────────────────────────────────────────────────
+  # RETRY - Tự động thử lại khi gặp lỗi
+  # ─────────────────────────────────────────────────────────────────────────
+  # maxAttempts: Số lần thử tối đa (bao gồm lần đầu tiên)
+  # waitDuration: Thời gian chờ giữa các lần thử
+  # retryExceptions: Các loại exception sẽ được retry
+  retry:
+    instances:
+      providerRetry:
+        maxAttempts: 3                          # Tối đa 3 lần thử
+        waitDuration: 2s                        # Đợi 2 giây giữa các lần
+        enableExponentialBackoff: false         # Không tăng thời gian chờ theo cấp số nhân
+        retryExceptions:
+          - java.lang.Exception                 # Retry với tất cả Exception
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # CIRCUIT BREAKER - Ngắt mạch khi lỗi quá nhiều
+  # ─────────────────────────────────────────────────────────────────────────
+  # slidingWindowType: Kiểu cửa sổ trượt (COUNT_BASED hoặc TIME_BASED)
+  # slidingWindowSize: Kích thước cửa sổ (số request để tính tỷ lệ lỗi)
+  # failureRateThreshold: Ngưỡng tỷ lệ lỗi để chuyển sang OPEN (%)
+  # waitDurationInOpenState: Thời gian OPEN trước khi chuyển HALF_OPEN
+  # permittedNumberOfCallsInHalfOpenState: Số request được phép khi HALF_OPEN
+  # minimumNumberOfCalls: Số request tối thiểu trước khi tính tỷ lệ lỗi
+  circuitbreaker:
+    instances:
+      providerCircuitBreaker:
+        slidingWindowType: COUNT_BASED          # Đếm theo số request
+        slidingWindowSize: 5                    # Xét 5 request gần nhất
+        failureRateThreshold: 50                # Nếu 50% lỗi → OPEN
+        waitDurationInOpenState: 10s            # Đợi 10s rồi chuyển HALF_OPEN
+        permittedNumberOfCallsInHalfOpenState: 3  # Cho 3 request thử khi HALF_OPEN
+        minimumNumberOfCalls: 3                 # Cần ít nhất 3 request mới tính tỷ lệ
+        automaticTransitionFromOpenToHalfOpenEnabled: true  # Tự động chuyển HALF_OPEN
+        registerHealthIndicator: true           # Đăng ký với Actuator health
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # RATE LIMITER - Giới hạn số request/thời gian
+  # ─────────────────────────────────────────────────────────────────────────
+  # limitForPeriod: Số request cho phép trong một chu kỳ
+  # limitRefreshPeriod: Thời gian mỗi chu kỳ (refresh lại số lượng permit)
+  # timeoutDuration: Thời gian chờ nếu không còn permit
+  ratelimiter:
+    instances:
+      providerRateLimiter:
+        limitForPeriod: 5                       # Tối đa 5 request
+        limitRefreshPeriod: 10s                 # Mỗi 10 giây
+        timeoutDuration: 0s                     # Không đợi, từ chối ngay
+        registerHealthIndicator: true
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # BULKHEAD - Giới hạn số request đồng thời (Semaphore-based)
+  # ─────────────────────────────────────────────────────────────────────────
+  # maxConcurrentCalls: Số request đồng thời tối đa
+  # maxWaitDuration: Thời gian chờ nếu đã đạt max concurrent calls
+  bulkhead:
+    instances:
+      providerBulkhead:
+        maxConcurrentCalls: 3                   # Tối đa 3 request cùng lúc
+        maxWaitDuration: 0s                     # Không đợi, từ chối ngay
