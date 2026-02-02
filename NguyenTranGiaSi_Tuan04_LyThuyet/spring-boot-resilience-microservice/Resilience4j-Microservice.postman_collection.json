@@ -1,0 +1,271 @@
+{
+	"info": {
+		"name": "🛡️ Resilience4j Microservice Demo",
+		"description": "Test Resilience4j patterns với Order Service và Product Service\n\n**Services:**\n- Product Service: http://localhost:8081\n- Order Service: http://localhost:8080\n\n**Patterns:**\n1. Retry - Tự động thử lại\n2. Circuit Breaker - Ngắt mạch khi lỗi nhiều\n3. Rate Limiter - Giới hạn request/giây\n4. Bulkhead - Giới hạn concurrent requests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "order_service",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "product_service",
+			"value": "http://localhost:8081",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "📦 Product Service (8081)",
+			"item": [
+				{
+					"name": "1. Get Products List",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{product_service}}/api/products/list",
+							"host": ["{{product_service}}"],
+							"path": ["api", "products", "list"]
+						},
+						"description": "Luôn thành công - Test happy path"
+					}
+				},
+				{
+					"name": "2. Unstable Product (50% lỗi)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{product_service}}/api/products/unstable",
+							"host": ["{{product_service}}"],
+							"path": ["api", "products", "unstable"]
+						},
+						"description": "50% xác suất lỗi - Dùng để test RETRY"
+					}
+				},
+				{
+					"name": "3. Slow Product (delay 3s)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{product_service}}/api/products/slow?delaySeconds=3",
+							"host": ["{{product_service}}"],
+							"path": ["api", "products", "slow"],
+							"query": [
+								{
+									"key": "delaySeconds",
+									"value": "3"
+								}
+							]
+						},
+						"description": "Delay n giây - Dùng để test BULKHEAD"
+					}
+				},
+				{
+					"name": "4. Error Product (luôn lỗi)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{product_service}}/api/products/error",
+							"host": ["{{product_service}}"],
+							"path": ["api", "products", "error"]
+						},
+						"description": "Luôn trả lỗi 500 - Dùng để test CIRCUIT BREAKER"
+					}
+				},
+				{
+					"name": "5. Product Service Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{product_service}}/api/products/status",
+							"host": ["{{product_service}}"],
+							"path": ["api", "products", "status"]
+						},
+						"description": "Xem trạng thái và số request"
+					}
+				},
+				{
+					"name": "6. Reset Counter",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{product_service}}/api/products/reset",
+							"host": ["{{product_service}}"],
+							"path": ["api", "products", "reset"]
+						},
+						"description": "Reset bộ đếm về 0"
+					}
+				}
+			]
+		},
+		{
+			"name": "🛒 Order Service (8080) - Resilience4j",
+			"item": [
+				{
+					"name": "🔄 1. Test RETRY",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/api/orders/retry",
+							"host": ["{{order_service}}"],
+							"path": ["api", "orders", "retry"]
+						},
+						"description": "**Test RETRY Pattern**\n\nGọi Product Service /unstable (50% lỗi).\nNếu lỗi → tự động retry tối đa 3 lần.\n\n**Kết quả:**\n- SUCCESS: Sau vài lần retry thành công\n- ERROR 503: \"Product Service unavailable after retry\" (nếu retry hết)"
+					}
+				},
+				{
+					"name": "🔌 2. Test CIRCUIT BREAKER",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/api/orders/circuit-breaker",
+							"host": ["{{order_service}}"],
+							"path": ["api", "orders", "circuit-breaker"]
+						},
+						"description": "**Test CIRCUIT BREAKER Pattern**\n\n**Cách test:**\n1. Gọi endpoint này 5-6 lần liên tục\n2. Xem response có circuit state\n\n**Kết quả mong đợi:**\n- Lần 1-3: ERROR (Product Service lỗi), circuit CLOSED\n- Lần 4-5: ERROR, tỷ lệ lỗi >50%\n- Lần 6+: Circuit OPEN → \"Circuit breaker is OPEN\"\n\n**Sau 10 giây:** Circuit tự chuyển HALF_OPEN"
+					}
+				},
+				{
+					"name": "⏱️ 3. Test RATE LIMITER",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/api/orders/rate-limiter",
+							"host": ["{{order_service}}"],
+							"path": ["api", "orders", "rate-limiter"]
+						},
+						"description": "**Test RATE LIMITER Pattern**\n\nGiới hạn: 5 requests / 10 giây\n\n**Cách test:**\n- Gọi nhanh >5 lần liên tục\n- Hoặc dùng Postman Runner với 10 iterations\n\n**Kết quả:**\n- Request 1-5: SUCCESS\n- Request 6+: ERROR 503 \"Rate limit exceeded\"\n- Sau 10 giây: Reset, cho phép 5 request mới"
+					}
+				},
+				{
+					"name": "🚢 4. Test BULKHEAD",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/api/orders/bulkhead",
+							"host": ["{{order_service}}"],
+							"path": ["api", "orders", "bulkhead"]
+						},
+						"description": "**Test BULKHEAD Pattern**\n\nGiới hạn: 3 concurrent requests\n\n**Cách test:**\n- Mở 5 tab Postman và gọi đồng thời\n- Hoặc dùng Runner với delay 0ms\n\n**Kết quả:**\n- 3 request đầu: SUCCESS (delay 3s)\n- Request 4+: ERROR 503 \"Service overloaded\"\n\n**Lưu ý:** Endpoint gọi Product Service /slow (delay 3s) nên dễ test concurrent"
+					}
+				},
+				{
+					"name": "🔗 5. Test COMBINED",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/api/orders/combined",
+							"host": ["{{order_service}}"],
+							"path": ["api", "orders", "combined"]
+						},
+						"description": "**Test KẾT HỢP Pattern**\n\nÁp dụng đồng thời:\n1. Rate Limiter (5 req/10s)\n2. Circuit Breaker (50% failure → OPEN)\n3. Retry (3 lần)\n\nThứ tự kiểm tra:\nRequest → Rate Limiter → Circuit Breaker → Retry → Product Service"
+					}
+				},
+				{
+					"name": "📊 6. Circuit Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/api/orders/circuit-status",
+							"host": ["{{order_service}}"],
+							"path": ["api", "orders", "circuit-status"]
+						},
+						"description": "Xem trạng thái Circuit Breaker:\n- circuitState: CLOSED/OPEN/HALF_OPEN\n- failureRate: Tỷ lệ lỗi\n- successfulCalls: Số lần thành công\n- failedCalls: Số lần thất bại"
+					}
+				},
+				{
+					"name": "🔄 7. Reset Circuit Breaker",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/api/orders/circuit-reset",
+							"host": ["{{order_service}}"],
+							"path": ["api", "orders", "circuit-reset"]
+						},
+						"description": "Reset Circuit Breaker về CLOSED.\nDùng khi muốn demo lại từ đầu."
+					}
+				}
+			]
+		},
+		{
+			"name": "📈 Actuator Monitoring",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/actuator/health",
+							"host": ["{{order_service}}"],
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "All Circuit Breakers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/actuator/circuitbreakers",
+							"host": ["{{order_service}}"],
+							"path": ["actuator", "circuitbreakers"]
+						}
+					}
+				},
+				{
+					"name": "All Rate Limiters",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/actuator/ratelimiters",
+							"host": ["{{order_service}}"],
+							"path": ["actuator", "ratelimiters"]
+						}
+					}
+				},
+				{
+					"name": "All Retries",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/actuator/retries",
+							"host": ["{{order_service}}"],
+							"path": ["actuator", "retries"]
+						}
+					}
+				},
+				{
+					"name": "All Bulkheads",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{order_service}}/actuator/bulkheads",
+							"host": ["{{order_service}}"],
+							"path": ["actuator", "bulkheads"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

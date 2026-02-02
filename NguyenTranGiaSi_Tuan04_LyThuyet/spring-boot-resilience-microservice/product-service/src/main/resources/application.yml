@@ -1,0 +1,23 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# RESILIENCE PROVIDER - SERVICE B
+# ═══════════════════════════════════════════════════════════════════════════
+# Service cung cấp dữ liệu, có thể giả lập các tình huống:
+# - Trả dữ liệu bình thường
+# - Giả lập lỗi 500 (random hoặc always)
+# - Giả lập delay/timeout
+
+spring:
+  application:
+    name: product-service
+
+server:
+  port: 8081
+
+# ═══════════════════════════════════════════════════════════════════════════
+# LOGGING - Để theo dõi các request đến Provider
+# ═══════════════════════════════════════════════════════════════════════════
+logging:
+  level:
+    com.iuh.fit: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

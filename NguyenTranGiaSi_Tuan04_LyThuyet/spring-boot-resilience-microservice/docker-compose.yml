@@ -1,35 +1,35 @@
 version: '3.8'
 
 services:
-  # Provider Service - Cung cấp dữ liệu
-  resilience-provider:
-    build: ./resilience-provider
-    container_name: resilience-provider
+  # Product Service - Cung cấp dữ liệu sản phẩm
+  product-service:
+    build: ./product-service
+    container_name: product-service
     ports:
       - "8081:8081"
     networks:
-      - resilience-network
+      - microservice-network
     environment:
       - SPRING_PROFILES_ACTIVE=docker
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/api/provider/status"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8081/api/products/status"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Client Service - Gọi Provider với Resilience4j
-  resilience-client:
-    build: ./resilience-client
-    container_name: resilience-client
+  # Order Service - Nhận order và gọi Product Service với Resilience4j
+  order-service:
+    build: ./order-service
+    container_name: order-service
     ports:
       - "8080:8080"
     networks:
-      - resilience-network
+      - microservice-network
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - PROVIDER_URL=http://resilience-provider:8081
+      - PRODUCT_SERVICE_URL=http://product-service:8081
     depends_on:
-      - resilience-provider
+      - product-service
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
       interval: 30s
@@ -37,5 +37,5 @@ services:
       retries: 3
 
 networks:
-  resilience-network:
+  microservice-network:
     driver: bridge
