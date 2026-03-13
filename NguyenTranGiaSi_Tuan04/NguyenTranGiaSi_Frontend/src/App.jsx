@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
+import CmsArticles from './CmsArticles'
 
 const overviewEndpoints = {
   plugins: '/api/overview/plugins',
@@ -44,6 +45,7 @@ function timestamp(value) {
 }
 
 function App() {
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [data, setData] = useState(fallbackData)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -136,6 +138,13 @@ function App() {
   return (
     <main className="dashboard-shell">
       <div className="bg-noise" aria-hidden="true" />
+      <nav className="top-nav">
+        <button className={activeTab === 'dashboard' ? 'nav-active' : ''} onClick={() => setActiveTab('dashboard')}>Overview Dashboard</button>
+        <button className={activeTab === 'cms' ? 'nav-active' : ''} onClick={() => setActiveTab('cms')}>CMS Bài viết</button>
+      </nav>
+
+      {activeTab === 'dashboard' ? (
+      <>
       <section className="hero-card">
         <div className="hero-header">
           <div>
@@ -352,6 +361,10 @@ function App() {
           </article>
         </div>
       </section>
+      </>
+      ) : (
+        <CmsArticles />
+      )}
     </main>
   )
 }
