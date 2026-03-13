@@ -1,0 +1,35 @@
+@startuml
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+Person(editor, "Content Editor", "Tạo và quản lý nội dung trong CMS.")
+
+Person(admin, "CMS Admin", "Quản lý cấu hình hệ thống và plugin.")
+
+Person(developer, "Plugin Developer", "Xây dựng và cài đặt plugin mới.")
+
+System(pluginCMS, "Plugin CMS", "Hệ thống quản lý nội dung với kiến trúc Microkernel. Xây dựng bằng Spring Boot.")
+
+System_Ext(postgresql, "PostgreSQL", "Lưu trữ nội dung, metadata plugin và cấu hình hệ thống.")
+
+System_Ext(redis, "Redis Cache", "Cache session, query results và dữ liệu tạm thời.")
+
+System_Ext(objectStorage, "Object Storage", "Lưu trữ file media và plugin JAR. S3 hoặc MinIO.")
+
+System_Ext(emailSystem, "Email Service", "Gửi email thông báo đến người dùng. SMTP hoặc SendGrid.")
+
+Rel(editor, pluginCMS, "Tạo, chỉnh sửa và xuất bản nội dung", "HTTPS")
+
+Rel(admin, pluginCMS, "Quản lý hệ thống, cài đặt plugin", "HTTPS")
+
+Rel(developer, pluginCMS, "Cài đặt và cấu hình plugin", "Plugin SDK")
+
+Rel(pluginCMS, postgresql, "Đọc và ghi dữ liệu", "JDBC")
+
+Rel(pluginCMS, redis, "Cache dữ liệu", "Redis Protocol")
+
+Rel(pluginCMS, objectStorage, "Lưu trữ media và JAR file", "S3 API")
+
+Rel(pluginCMS, emailSystem, "Gửi email thông báo", "SMTP / REST")
+
+@enduml
