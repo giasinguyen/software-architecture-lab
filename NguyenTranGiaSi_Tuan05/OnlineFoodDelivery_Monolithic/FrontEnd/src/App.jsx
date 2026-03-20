@@ -9,7 +9,7 @@ export const UserContext = createContext()
 export const useUser = () => useContext(UserContext)
 
 function App() {
-  const [currentUser, setCurrentUser] = useState({ id: 1, name: 'Nguyễn Trần Gia Sĩ', role: 'USER' })
+  const [currentUser, setCurrentUser] = useState({ id: 1, name: 'Nguyễn Trần Gia Sĩ', role: 'ADMIN' })
 
   return (
     <UserContext.Provider value={{ currentUser, setCurrentUser }}>
