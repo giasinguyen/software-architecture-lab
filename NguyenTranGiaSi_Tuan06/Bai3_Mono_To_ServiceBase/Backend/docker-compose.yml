@@ -1,11 +1,22 @@
+## Biến DB dùng chung — đặt trong file .env cùng thư mục
+# POSTGRES_DB=food_delivery
+# POSTGRES_USER=postgres
+# POSTGRES_PASSWORD=postgres
+
+# YAML anchor: tái sử dụng env DB cho tất cả Spring services
+x-db-env: &db-env
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-food_delivery}
+  SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: food_delivery_db
     environment:
-      POSTGRES_DB: food_delivery
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-food_delivery}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
@@ -13,20 +24,22 @@ services:
     networks:
       - food_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d food_delivery"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-food_delivery}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   user-service:
     build:
       context: ./user-service
-      dockerfile: Dockerfile
     container_name: user_service
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      <<: *db-env
     ports:
       - "8081:8081"
     depends_on:
@@ -34,17 +47,24 @@ services:
         condition: service_healthy
     networks:
       - food_network
-    restart: on-failure
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/api/users || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
 
   food-service:
     build:
       context: ./food-service
-      dockerfile: Dockerfile
     container_name: food_service
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      <<: *db-env
     ports:
       - "8082:8082"
     depends_on:
@@ -52,17 +72,75 @@ services:
         condition: service_healthy
     networks:
       - food_network
-    restart: on-failure
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/api/foods || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
 
+  voucher-service:
+    build:
+      context: ./voucher-service
+    container_name: voucher_service
+    environment:
+      <<: *db-env
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - food_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- 'http://localhost:8084/api/vouchers/validate?code=health&orderTotal=0' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: notification_service
+    environment:
+      <<: *db-env
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - food_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/api/notifications/user/1 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
+
+  # order-service phụ thuộc 4 services kia → chờ service_healthy
   order-service:
     build:
       context: ./order-service
-      dockerfile: Dockerfile
     container_name: order_service
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
+      <<: *db-env
       SERVICE_USER_URL: http://user-service:8081
       SERVICE_FOOD_URL: http://food-service:8082
       SERVICE_VOUCHER_URL: http://voucher-service:8084
@@ -73,68 +151,47 @@ services:
       postgres:
         condition: service_healthy
       user-service:
-        condition: service_started
+        condition: service_healthy
       food-service:
-        condition: service_started
+        condition: service_healthy
       voucher-service:
-        condition: service_started
+        condition: service_healthy
       notification-service:
-        condition: service_started
-    networks:
-      - food_network
-    restart: on-failure
-
-  voucher-service:
-    build:
-      context: ./voucher-service
-      dockerfile: Dockerfile
-    container_name: voucher_service
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-    ports:
-      - "8084:8084"
-    depends_on:
-      postgres:
         condition: service_healthy
     networks:
       - food_network
-    restart: on-failure
-
-  notification-service:
-    build:
-      context: ./notification-service
-      dockerfile: Dockerfile
-    container_name: notification_service
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-    ports:
-      - "8085:8085"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - food_network
-    restart: on-failure
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/api/orders || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
 
   frontend:
     build:
       context: ../FrontEnd
-      dockerfile: Dockerfile
     container_name: food_delivery_frontend
     ports:
       - "3000:80"
     depends_on:
-      - user-service
-      - food-service
-      - order-service
-      - voucher-service
-      - notification-service
+      user-service:
+        condition: service_healthy
+      food-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      voucher-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
     networks:
       - food_network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
