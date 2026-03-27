@@ -1,0 +1,63 @@
+services:
+  mariadb:
+    image: mariadb:11-jammy
+    container_name: search_demo_db
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASS:-root}
+      MARIADB_DATABASE: search_demo
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - search_network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  backend:
+    build:
+      context: ./Backend
+    container_name: search_demo_backend
+    environment:
+      DB_HOST: mariadb
+      DB_USER: root
+      DB_PASS: ${DB_PASS:-root}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - search_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  frontend:
+    build:
+      context: ./Frontend
+    container_name: search_demo_frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - search_network
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+
+networks:
+  search_network:
+    driver: bridge

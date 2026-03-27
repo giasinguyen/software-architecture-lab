@@ -1,0 +1,6 @@
+com\demo\search\entity\Product.class
+com\demo\search\init\DatabaseInitializer.class
+com\demo\search\SearchApplication.class
+com\demo\search\repository\ProductRepository.class
+com\demo\search\controller\ProductController.class
+com\demo\search\service\ProductService.class
