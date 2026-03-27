@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:mariadb://${DB_HOST:localhost}:3306/search_demo
     username: ${DB_USER:root}
-    password: ${DB_PASS:root}
+    password: ${DB_PASS:sapassword}
     driver-class-name: org.mariadb.jdbc.Driver
   jpa:
     hibernate:
