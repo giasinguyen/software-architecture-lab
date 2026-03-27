@@ -1,0 +1,20 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: module-functional
+
+# Không dùng spring.datasource.* vì ta tự cấu hình 2 datasource thủ công
+app:
+  datasource:
+    user:
+      url: jdbc:mariadb://localhost:3306/user_db
+      username: root
+      password: root
+      driver-class-name: org.mariadb.jdbc.Driver
+    order:
+      url: jdbc:mariadb://localhost:3306/order_db
+      username: root
+      password: root
+      driver-class-name: org.mariadb.jdbc.Driver
