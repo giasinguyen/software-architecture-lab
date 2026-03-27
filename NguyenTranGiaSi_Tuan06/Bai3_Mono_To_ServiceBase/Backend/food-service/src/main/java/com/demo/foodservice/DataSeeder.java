@@ -1,0 +1,36 @@
+package com.demo.foodservice;
+
+import com.demo.foodservice.entity.Food;
+import com.demo.foodservice.repository.FoodRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+public class DataSeeder implements ApplicationRunner {
+
+    private final FoodRepository foodRepository;
+
+    @Override
+    public void run(ApplicationArguments args) {
+        if (foodRepository.count() == 0) {
+            foodRepository.saveAll(List.of(
+                    Food.builder().name("Phở Bò Đặc Biệt").description("Phở bò truyền thống với nước dùng đậm đà, thịt bò tái chín mềm").price(BigDecimal.valueOf(65000)).category("Phở").imageUrl("https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Bún Bò Huế").description("Bún bò Huế cay nồng đặc trưng, sả thơm, chả lụa").price(BigDecimal.valueOf(55000)).category("Bún").imageUrl("https://images.unsplash.com/photo-1555126634-323283e090fa?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Cơm Tấm Sườn Bì").description("Cơm tấm sườn bì chả trứng, đầy đủ topping").price(BigDecimal.valueOf(45000)).category("Cơm").imageUrl("https://images.unsplash.com/photo-1512058564366-18510be2db19?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Bánh Mì Thịt Nguội").description("Bánh mì giòn với pate, thịt nguội, rau thơm tươi").price(BigDecimal.valueOf(25000)).category("Bánh Mì").imageUrl("https://images.unsplash.com/photo-1509722747041-616f39b57569?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Gà Chiên Nước Mắm").description("Gà chiên vàng giòn, sốt nước mắm tỏi ớt đặc biệt").price(BigDecimal.valueOf(75000)).category("Gà").imageUrl("https://images.unsplash.com/photo-1598103442097-8b74394b95c3?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Pizza Hải Sản").description("Pizza đế mỏng với hải sản tươi, phô mai kéo sợi").price(BigDecimal.valueOf(120000)).category("Pizza").imageUrl("https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Burger Bò Nướng").description("Burger bò Angus nướng, rau tươi và sốt đặc biệt của nhà").price(BigDecimal.valueOf(85000)).category("Burger").imageUrl("https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Mì Xào Hải Sản").description("Mì xào giòn với tôm, mực, ngao và rau củ tươi").price(BigDecimal.valueOf(70000)).category("Mì").imageUrl("https://images.unsplash.com/photo-1552611052-33e04de081de?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Trà Sữa Trân Châu").description("Trà sữa hoàng kim với trân châu đen dẻo, béo ngậy").price(BigDecimal.valueOf(35000)).category("Đồ Uống").imageUrl("https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80").available(true).orderCount(0).build(),
+                    Food.builder().name("Chè Khúc Bạch").description("Chè khúc bạch mát lạnh với nhãn, hạnh nhân, lychee").price(BigDecimal.valueOf(30000)).category("Chè").imageUrl("https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=500&q=80").available(true).orderCount(0).build()
+            ));
+        }
+    }
+}

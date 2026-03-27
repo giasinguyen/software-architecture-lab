@@ -1,0 +1,144 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: food_delivery_db
+    environment:
+      POSTGRES_DB: food_delivery
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - food_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d food_delivery"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user_service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - food_network
+    restart: on-failure
+
+  food-service:
+    build:
+      context: ./food-service
+      dockerfile: Dockerfile
+    container_name: food_service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - food_network
+    restart: on-failure
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order_service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SERVICE_USER_URL: http://user-service:8081
+      SERVICE_FOOD_URL: http://food-service:8082
+      SERVICE_VOUCHER_URL: http://voucher-service:8084
+      SERVICE_NOTIFICATION_URL: http://notification-service:8085
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      food-service:
+        condition: service_started
+      voucher-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    networks:
+      - food_network
+    restart: on-failure
+
+  voucher-service:
+    build:
+      context: ./voucher-service
+      dockerfile: Dockerfile
+    container_name: voucher_service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - food_network
+    restart: on-failure
+
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification_service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/food_delivery
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+    ports:
+      - "8085:8085"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - food_network
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ../FrontEnd
+      dockerfile: Dockerfile
+    container_name: food_delivery_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - user-service
+      - food-service
+      - order-service
+      - voucher-service
+      - notification-service
+    networks:
+      - food_network
+
+volumes:
+  postgres_data:
+
+networks:
+  food_network:
+    driver: bridge

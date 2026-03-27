@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: order-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/food_delivery}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8083
+
+# URLs đến các services khác (override qua env var khi chạy Docker)
+services:
+  user-url: ${SERVICE_USER_URL:http://localhost:8081}
+  food-url: ${SERVICE_FOOD_URL:http://localhost:8082}
+  voucher-url: ${SERVICE_VOUCHER_URL:http://localhost:8084}
+  notification-url: ${SERVICE_NOTIFICATION_URL:http://localhost:8085}
