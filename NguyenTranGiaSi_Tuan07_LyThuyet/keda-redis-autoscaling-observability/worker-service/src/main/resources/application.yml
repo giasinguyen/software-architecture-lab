@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: worker-service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+worker:
+  queue-name: ${QUEUE_NAME:job-queue}
+  processing-delay-ms: ${PROCESSING_DELAY_MS:2000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: worker-service

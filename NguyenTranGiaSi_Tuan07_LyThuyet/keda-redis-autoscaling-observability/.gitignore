@@ -1,0 +1,16 @@
+.github
+
+# Java
+worker-service/target/
+*.class
+*.jar
+!worker-service/pom.xml
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# OS
+Thumbs.db
