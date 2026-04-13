@@ -1,0 +1,10 @@
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\command\dto\CreateTodoRequest.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\command\dto\UpdateTodoRequest.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\command\model\TodoEntity.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\command\repository\TodoWriteRepository.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\command\service\TodoCommandService.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\controller\TodoController.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\query\model\TodoView.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\query\repository\TodoReadRepository.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\query\service\TodoQueryService.java
+D:\TaiLieuHocTap\Tai_Lieu_HK2_Nam4\KienTrucVaThietKePhanMem\software-architecture-lab\NguyenTranGiaSi_Tuan08_LyThuyet\bai1-todo-cqrs\src\main\java\com\example\todo\TodoCqrsApplication.java
