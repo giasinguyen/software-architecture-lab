@@ -1,0 +1,384 @@
+{
+	"info": {
+		"name": "Event Sourcing Lab",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{ "key": "bai1_url", "value": "http://localhost:9091" },
+		{ "key": "bai2_url", "value": "http://localhost:9092" },
+		{ "key": "bai3_url", "value": "http://localhost:9093" },
+		{ "key": "bai4_url", "value": "http://localhost:9094" },
+		{ "key": "bai5_url", "value": "http://localhost:9095" },
+		{ "key": "accountId", "value": "" },
+		{ "key": "accountId2", "value": "" },
+		{ "key": "accountId3", "value": "" },
+		{ "key": "accountId4", "value": "" },
+		{ "key": "orderId", "value": "" }
+	],
+	"item": [
+		{
+			"name": "Bai 1 - Bank Account (Event Sourcing)",
+			"item": [
+				{
+					"name": "1. Create Account (initial 1000)",
+					"event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.collectionVariables.set('accountId', json.accountId);", "pm.test('Account created', function() { pm.response.to.have.status(200); });"] } }],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"initialDeposit\": 1000 }" },
+						"url": { "raw": "{{bai1_url}}/accounts", "host": ["{{bai1_url}}"], "path": ["accounts"] }
+					}
+				},
+				{
+					"name": "2. Deposit 500",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 500 }" },
+						"url": { "raw": "{{bai1_url}}/accounts/{{accountId}}/deposit", "host": ["{{bai1_url}}"], "path": ["accounts", "{{accountId}}", "deposit"] }
+					}
+				},
+				{
+					"name": "3. Deposit 300",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 300 }" },
+						"url": { "raw": "{{bai1_url}}/accounts/{{accountId}}/deposit", "host": ["{{bai1_url}}"], "path": ["accounts", "{{accountId}}", "deposit"] }
+					}
+				},
+				{
+					"name": "4. Withdraw 200",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 200 }" },
+						"url": { "raw": "{{bai1_url}}/accounts/{{accountId}}/withdraw", "host": ["{{bai1_url}}"], "path": ["accounts", "{{accountId}}", "withdraw"] }
+					}
+				},
+				{
+					"name": "5. Get Balance (expect 1600)",
+					"event": [{ "listen": "test", "script": { "exec": ["pm.test('Balance is 1600', function() { pm.expect(pm.response.json().balance).to.eql(1600); });"] } }],
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai1_url}}/accounts/{{accountId}}/balance", "host": ["{{bai1_url}}"], "path": ["accounts", "{{accountId}}", "balance"] }
+					}
+				},
+				{
+					"name": "6. Get All Events",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai1_url}}/accounts/{{accountId}}/events", "host": ["{{bai1_url}}"], "path": ["accounts", "{{accountId}}", "events"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Bai 2 - Time Travel / Undo",
+			"item": [
+				{
+					"name": "1. Create Account ACC-01",
+					"event": [{ "listen": "test", "script": { "exec": ["pm.collectionVariables.set('accountId2', 'ACC-01');"] } }],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"accountId\": \"ACC-01\", \"initialDeposit\": 1000 }" },
+						"url": { "raw": "{{bai2_url}}/accounts", "host": ["{{bai2_url}}"], "path": ["accounts"] }
+					}
+				},
+				{
+					"name": "2. Deposit 500",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 500 }" },
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/deposit", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "deposit"] }
+					}
+				},
+				{
+					"name": "3. Withdraw 200",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 200 }" },
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/withdraw", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "withdraw"] }
+					}
+				},
+				{
+					"name": "4. Deposit 700",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 700 }" },
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/deposit", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "deposit"] }
+					}
+				},
+				{
+					"name": "5. Get Balance (expect 2000)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/balance", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "balance"] }
+					}
+				},
+				{
+					"name": "6. Get State At index 0 (after create = 1000)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/state-at/0", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "state-at", "0"] }
+					}
+				},
+				{
+					"name": "7. Get State At index 1 (after deposit = 1500)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/state-at/1", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "state-at", "1"] }
+					}
+				},
+				{
+					"name": "8. Get State At index 2 (after withdraw = 1300)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/state-at/2", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "state-at", "2"] }
+					}
+				},
+				{
+					"name": "9. Get Full History",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/history", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "history"] }
+					}
+				},
+				{
+					"name": "10. Undo Last Event (undo deposit 700)",
+					"request": {
+						"method": "POST",
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/undo", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "undo"] }
+					}
+				},
+				{
+					"name": "11. Get Balance after undo (expect 1300)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai2_url}}/accounts/{{accountId2}}/balance", "host": ["{{bai2_url}}"], "path": ["accounts", "{{accountId2}}", "balance"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Bai 3 - Projection (Read Model)",
+			"item": [
+				{
+					"name": "1. Create Account (initial 1000)",
+					"event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.collectionVariables.set('accountId3', json.accountId);"] } }],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"initialDeposit\": 1000 }" },
+						"url": { "raw": "{{bai3_url}}/accounts", "host": ["{{bai3_url}}"], "path": ["accounts"] }
+					}
+				},
+				{
+					"name": "2. Deposit 500",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 500 }" },
+						"url": { "raw": "{{bai3_url}}/accounts/{{accountId3}}/deposit", "host": ["{{bai3_url}}"], "path": ["accounts", "{{accountId3}}", "deposit"] }
+					}
+				},
+				{
+					"name": "3. Deposit 300",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 300 }" },
+						"url": { "raw": "{{bai3_url}}/accounts/{{accountId3}}/deposit", "host": ["{{bai3_url}}"], "path": ["accounts", "{{accountId3}}", "deposit"] }
+					}
+				},
+				{
+					"name": "4. Withdraw 200",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 200 }" },
+						"url": { "raw": "{{bai3_url}}/accounts/{{accountId3}}/withdraw", "host": ["{{bai3_url}}"], "path": ["accounts", "{{accountId3}}", "withdraw"] }
+					}
+				},
+				{
+					"name": "5. Get Summary (projection)",
+					"event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.test('Balance is 1600', function() { pm.expect(json.balance).to.eql(1600); });", "pm.test('Total deposits is 1800', function() { pm.expect(json.totalDeposits).to.eql(1800); });"] } }],
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai3_url}}/accounts/{{accountId3}}/summary", "host": ["{{bai3_url}}"], "path": ["accounts", "{{accountId3}}", "summary"] }
+					}
+				},
+				{
+					"name": "6. Get All Summaries",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai3_url}}/accounts/summaries", "host": ["{{bai3_url}}"], "path": ["accounts", "summaries"] }
+					}
+				},
+				{
+					"name": "7. Rebuild Projection",
+					"request": {
+						"method": "POST",
+						"url": { "raw": "{{bai3_url}}/accounts/{{accountId3}}/rebuild", "host": ["{{bai3_url}}"], "path": ["accounts", "{{accountId3}}", "rebuild"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Bai 4 - Snapshot Optimization",
+			"item": [
+				{
+					"name": "1. Create Account (initial 500)",
+					"event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.collectionVariables.set('accountId4', json.accountId);"] } }],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"initialDeposit\": 500 }" },
+						"url": { "raw": "{{bai4_url}}/accounts", "host": ["{{bai4_url}}"], "path": ["accounts"] }
+					}
+				},
+				{
+					"name": "2. Deposit 100",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 100 }" },
+						"url": { "raw": "{{bai4_url}}/accounts/{{accountId4}}/deposit", "host": ["{{bai4_url}}"], "path": ["accounts", "{{accountId4}}", "deposit"] }
+					}
+				},
+				{
+					"name": "3. Deposit 200 (triggers snapshot at 3 events)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 200 }" },
+						"url": { "raw": "{{bai4_url}}/accounts/{{accountId4}}/deposit", "host": ["{{bai4_url}}"], "path": ["accounts", "{{accountId4}}", "deposit"] }
+					}
+				},
+				{
+					"name": "4. Withdraw 50",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 50 }" },
+						"url": { "raw": "{{bai4_url}}/accounts/{{accountId4}}/withdraw", "host": ["{{bai4_url}}"], "path": ["accounts", "{{accountId4}}", "withdraw"] }
+					}
+				},
+				{
+					"name": "5. Deposit 150",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 150 }" },
+						"url": { "raw": "{{bai4_url}}/accounts/{{accountId4}}/deposit", "host": ["{{bai4_url}}"], "path": ["accounts", "{{accountId4}}", "deposit"] }
+					}
+				},
+				{
+					"name": "6. Deposit 100 (triggers 2nd snapshot at 6 events)",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"amount\": 100 }" },
+						"url": { "raw": "{{bai4_url}}/accounts/{{accountId4}}/deposit", "host": ["{{bai4_url}}"], "path": ["accounts", "{{accountId4}}", "deposit"] }
+					}
+				},
+				{
+					"name": "7. Get State (shows snapshot info)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai4_url}}/accounts/{{accountId4}}/state", "host": ["{{bai4_url}}"], "path": ["accounts", "{{accountId4}}", "state"] }
+					}
+				},
+				{
+					"name": "8. Get Snapshots",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai4_url}}/accounts/{{accountId4}}/snapshots", "host": ["{{bai4_url}}"], "path": ["accounts", "{{accountId4}}", "snapshots"] }
+					}
+				}
+			]
+		},
+		{
+			"name": "Bai 5 - Order CQRS + Event Sourcing",
+			"item": [
+				{
+					"name": "1. Create Order",
+					"event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.collectionVariables.set('orderId', json.orderId);"] } }],
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"customerName\": \"Nguyen Van A\" }" },
+						"url": { "raw": "{{bai5_url}}/orders", "host": ["{{bai5_url}}"], "path": ["orders"] }
+					}
+				},
+				{
+					"name": "2. Add Item - Laptop",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"itemName\": \"Laptop\", \"price\": 25000000, \"quantity\": 1 }" },
+						"url": { "raw": "{{bai5_url}}/orders/{{orderId}}/items", "host": ["{{bai5_url}}"], "path": ["orders", "{{orderId}}", "items"] }
+					}
+				},
+				{
+					"name": "3. Add Item - Mouse",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"itemName\": \"Mouse\", \"price\": 500000, \"quantity\": 2 }" },
+						"url": { "raw": "{{bai5_url}}/orders/{{orderId}}/items", "host": ["{{bai5_url}}"], "path": ["orders", "{{orderId}}", "items"] }
+					}
+				},
+				{
+					"name": "4. Add Item - Keyboard",
+					"request": {
+						"method": "POST",
+						"header": [{ "key": "Content-Type", "value": "application/json" }],
+						"body": { "mode": "raw", "raw": "{ \"itemName\": \"Keyboard\", \"price\": 800000, \"quantity\": 1 }" },
+						"url": { "raw": "{{bai5_url}}/orders/{{orderId}}/items", "host": ["{{bai5_url}}"], "path": ["orders", "{{orderId}}", "items"] }
+					}
+				},
+				{
+					"name": "5. Remove Item - Mouse",
+					"request": {
+						"method": "DELETE",
+						"url": { "raw": "{{bai5_url}}/orders/{{orderId}}/items/Mouse", "host": ["{{bai5_url}}"], "path": ["orders", "{{orderId}}", "items", "Mouse"] }
+					}
+				},
+				{
+					"name": "6. Confirm Order",
+					"request": {
+						"method": "POST",
+						"url": { "raw": "{{bai5_url}}/orders/{{orderId}}/confirm", "host": ["{{bai5_url}}"], "path": ["orders", "{{orderId}}", "confirm"] }
+					}
+				},
+				{
+					"name": "7. Get Order Projection (Read)",
+					"event": [{ "listen": "test", "script": { "exec": ["var json = pm.response.json();", "pm.test('Status is CONFIRMED', function() { pm.expect(json.status).to.eql('CONFIRMED'); });", "pm.test('Total price = 25800000', function() { pm.expect(json.totalPrice).to.eql(25800000); });"] } }],
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai5_url}}/orders/{{orderId}}", "host": ["{{bai5_url}}"], "path": ["orders", "{{orderId}}"] }
+					}
+				},
+				{
+					"name": "8. Get All Orders",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai5_url}}/orders", "host": ["{{bai5_url}}"], "path": ["orders"] }
+					}
+				},
+				{
+					"name": "9. Get Order Events (full history)",
+					"request": {
+						"method": "GET",
+						"url": { "raw": "{{bai5_url}}/orders/{{orderId}}/events", "host": ["{{bai5_url}}"], "path": ["orders", "{{orderId}}", "events"] }
+					}
+				}
+			]
+		}
+	]
+}
