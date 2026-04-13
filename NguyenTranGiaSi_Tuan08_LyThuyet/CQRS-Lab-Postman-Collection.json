@@ -1,0 +1,275 @@
+{
+  "info": {
+    "name": "CQRS Lab - All Exercises",
+    "_postman_id": "cqrs-lab-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Bai 1 - Todo CQRS (port 8081)",
+      "item": [
+        {
+          "name": "1. Create Todo",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Learn CQRS\",\n  \"description\": \"Study CQRS pattern with Spring Boot\"\n}"
+            },
+            "url": {"raw": "http://localhost:8081/todos", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["todos"]}
+          }
+        },
+        {
+          "name": "2. Create Todo 2",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Practice Spring Boot\",\n  \"description\": \"Build demo projects\"\n}"
+            },
+            "url": {"raw": "http://localhost:8081/todos", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["todos"]}
+          }
+        },
+        {
+          "name": "3. Get All Todos (Query)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8081/todos", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["todos"]}
+          }
+        },
+        {
+          "name": "4. Get Todo By ID (Query)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8081/todos/1", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["todos", "1"]}
+          }
+        },
+        {
+          "name": "5. Update Todo",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Learn CQRS - Updated\",\n  \"description\": \"Deep dive into CQRS pattern\",\n  \"completed\": true\n}"
+            },
+            "url": {"raw": "http://localhost:8081/todos/1", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["todos", "1"]}
+          }
+        },
+        {
+          "name": "6. Get Updated Todo (Query)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8081/todos/1", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["todos", "1"]}
+          }
+        },
+        {
+          "name": "7. Delete Todo",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "http://localhost:8081/todos/2", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["todos", "2"]}
+          }
+        },
+        {
+          "name": "8. Get All Todos After Delete",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8081/todos", "protocol": "http", "host": ["localhost"], "port": "8081", "path": ["todos"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bai 2 - Order Event (port 8082)",
+      "item": [
+        {
+          "name": "1. Create Order",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Nguyen Van A\",\n  \"product\": \"Laptop Dell XPS 15\",\n  \"quantity\": 1,\n  \"totalPrice\": 25000000\n}"
+            },
+            "url": {"raw": "http://localhost:8082/orders", "protocol": "http", "host": ["localhost"], "port": "8082", "path": ["orders"]}
+          }
+        },
+        {
+          "name": "2. Create Order 2",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Tran Van B\",\n  \"product\": \"iPhone 16 Pro\",\n  \"quantity\": 2,\n  \"totalPrice\": 60000000\n}"
+            },
+            "url": {"raw": "http://localhost:8082/orders", "protocol": "http", "host": ["localhost"], "port": "8082", "path": ["orders"]}
+          }
+        },
+        {
+          "name": "3. Get All Orders (Query from Read Model)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8082/orders", "protocol": "http", "host": ["localhost"], "port": "8082", "path": ["orders"]}
+          }
+        },
+        {
+          "name": "4. Get Order By ID (Query)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8082/orders/1", "protocol": "http", "host": ["localhost"], "port": "8082", "path": ["orders", "1"]}
+          }
+        },
+        {
+          "name": "5. Cancel Order",
+          "request": {
+            "method": "PUT",
+            "url": {"raw": "http://localhost:8082/orders/2/cancel", "protocol": "http", "host": ["localhost"], "port": "8082", "path": ["orders", "2", "cancel"]}
+          }
+        },
+        {
+          "name": "6. Get All Orders After Cancel (Query)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8082/orders", "protocol": "http", "host": ["localhost"], "port": "8082", "path": ["orders"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bai 3 - Train Ticket (port 8083)",
+      "item": [
+        {
+          "name": "1. Get All Trips",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8083/trips", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["trips"]}
+          }
+        },
+        {
+          "name": "2. Search Trips (Ha Noi -> Sai Gon)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8083/trips/search?departure=Ha Noi&destination=Sai Gon", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["trips", "search"], "query": [{"key": "departure", "value": "Ha Noi"}, {"key": "destination", "value": "Sai Gon"}]}
+          }
+        },
+        {
+          "name": "3. Book Ticket - Seat 1",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripId\": 1,\n  \"passengerName\": \"Nguyen Van A\",\n  \"seatNumber\": 1\n}"
+            },
+            "url": {"raw": "http://localhost:8083/tickets/book", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["tickets", "book"]}
+          }
+        },
+        {
+          "name": "4. Book Ticket - Seat 2",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripId\": 1,\n  \"passengerName\": \"Tran Van B\",\n  \"seatNumber\": 2\n}"
+            },
+            "url": {"raw": "http://localhost:8083/tickets/book", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["tickets", "book"]}
+          }
+        },
+        {
+          "name": "5. Book Ticket - Duplicate Seat (should fail)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripId\": 1,\n  \"passengerName\": \"Le Van C\",\n  \"seatNumber\": 1\n}"
+            },
+            "url": {"raw": "http://localhost:8083/tickets/book", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["tickets", "book"]}
+          }
+        },
+        {
+          "name": "6. Get All Tickets (Query)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8083/tickets", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["tickets"]}
+          }
+        },
+        {
+          "name": "7. Cancel Ticket",
+          "request": {
+            "method": "PUT",
+            "url": {"raw": "http://localhost:8083/tickets/1/cancel", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["tickets", "1", "cancel"]}
+          }
+        },
+        {
+          "name": "8. Get Tickets After Cancel",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8083/tickets", "protocol": "http", "host": ["localhost"], "port": "8083", "path": ["tickets"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bai 4 - CQRS Microservice",
+      "item": [
+        {
+          "name": "1. [Command] Create Order (port 8084)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Nguyen Van A\",\n  \"product\": \"MacBook Pro M4\",\n  \"quantity\": 1,\n  \"totalPrice\": 45000000\n}"
+            },
+            "url": {"raw": "http://localhost:8084/orders", "protocol": "http", "host": ["localhost"], "port": "8084", "path": ["orders"]}
+          }
+        },
+        {
+          "name": "2. [Command] Create Order 2 (port 8084)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Tran Van B\",\n  \"product\": \"Samsung Galaxy S25\",\n  \"quantity\": 3,\n  \"totalPrice\": 75000000\n}"
+            },
+            "url": {"raw": "http://localhost:8084/orders", "protocol": "http", "host": ["localhost"], "port": "8084", "path": ["orders"]}
+          }
+        },
+        {
+          "name": "3. [Query] Get All Orders (port 8085)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8085/orders", "protocol": "http", "host": ["localhost"], "port": "8085", "path": ["orders"]}
+          }
+        },
+        {
+          "name": "4. [Query] Get Order By ID (port 8085)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8085/orders/1", "protocol": "http", "host": ["localhost"], "port": "8085", "path": ["orders", "1"]}
+          }
+        },
+        {
+          "name": "5. [Command] Cancel Order (port 8084)",
+          "request": {
+            "method": "PUT",
+            "url": {"raw": "http://localhost:8084/orders/2/cancel", "protocol": "http", "host": ["localhost"], "port": "8084", "path": ["orders", "2", "cancel"]}
+          }
+        },
+        {
+          "name": "6. [Query] Get All After Cancel (port 8085)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "http://localhost:8085/orders", "protocol": "http", "host": ["localhost"], "port": "8085", "path": ["orders"]}
+          }
+        }
+      ]
+    }
+  ]
+}

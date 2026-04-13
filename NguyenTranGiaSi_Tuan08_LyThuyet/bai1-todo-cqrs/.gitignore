@@ -1,0 +1,60 @@
+# ===== Build output =====
+target/
+build/
+out/
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== Temporary files =====
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# ===== OS files =====
+.DS_Store
+Thumbs.db
+
+# ===== IDE (IntelliJ IDEA) =====
+.idea/
+*.iml
+
+# ===== IDE (Eclipse) =====
+.project
+.classpath
+.settings/
+
+# ===== IDE (VS Code) =====
+.vscode/
+
+# ===== Java class files =====
+*.class
+
+# ===== Maven =====
+.mvn/wrapper/maven-wrapper.jar
+
+# ===== Gradle =====
+.gradle/
+
+# ===== Environment variables =====
+.env
+.env.*
+
+# ===== Application config (sensitive) =====
+application-local.yml
+application-local.properties
+application-dev.yml
+application-dev.properties
+
+# ===== Generated files =====
+*.jar
+*.war
+
+# ===== Test output =====
+test-output/
+surefire-reports/
+
+# ===== Coverage =====
+coverage/
