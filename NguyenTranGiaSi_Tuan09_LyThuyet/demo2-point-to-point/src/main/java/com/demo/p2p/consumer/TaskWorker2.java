@@ -24,6 +24,11 @@ import java.util.Map;
 public class TaskWorker2 {
 
     private static final Logger log = LoggerFactory.getLogger(TaskWorker2.class);
+    private final MessageStore store;
+
+    public TaskWorker2(MessageStore store) {
+        this.store = store;
+    }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_TASK)
     public void processTask(Map<String, Object> task,
@@ -46,5 +51,13 @@ public class TaskWorker2 {
         channel.basicAck(deliveryTag, false);
         log.info("  ✓ Done! ACK sent");
         log.info("══════════════════════════════════════════════════");
+
+        store.add(Map.of(
+                "consumer", "Worker-2",
+                "queue", RabbitMQConfig.QUEUE_TASK,
+                "status", "completed in " + durationMs + "ms",
+                "receivedAt", LocalDateTime.now().toString(),
+                "data", task
+        ));
     }
 }

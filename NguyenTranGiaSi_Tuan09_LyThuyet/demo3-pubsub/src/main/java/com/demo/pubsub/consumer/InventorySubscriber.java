@@ -1,11 +1,13 @@
 package com.demo.pubsub.consumer;
 
 import com.demo.pubsub.config.RabbitMQConfig;
+import com.demo.pubsub.service.MessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -16,6 +18,11 @@ import java.util.Map;
 public class InventorySubscriber {
 
     private static final Logger log = LoggerFactory.getLogger(InventorySubscriber.class);
+    private final MessageStore store;
+
+    public InventorySubscriber(MessageStore store) {
+        this.store = store;
+    }
 
     @RabbitListener(queues = RabbitMQConfig.FANOUT_QUEUE_INVENTORY)
     public void onOrderEvent(Map<String, Object> event) {
@@ -24,5 +31,13 @@ public class InventorySubscriber {
         log.info("  orderId   : {}", event.get("orderId"));
         log.info("  → Deducting stock for ordered items...");
         log.info("══════════════════════════════════════════════════");
+
+        store.add(Map.of(
+                "consumer", "InventorySubscriber",
+                "queue", RabbitMQConfig.FANOUT_QUEUE_INVENTORY,
+                "type", "fanout",
+                "receivedAt", LocalDateTime.now().toString(),
+                "data", event
+        ));
     }
 }

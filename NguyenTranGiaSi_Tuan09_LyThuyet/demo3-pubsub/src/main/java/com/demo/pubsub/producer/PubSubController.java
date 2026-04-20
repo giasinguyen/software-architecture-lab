@@ -1,6 +1,7 @@
 package com.demo.pubsub.producer;
 
 import com.demo.pubsub.config.RabbitMQConfig;
+import com.demo.pubsub.service.MessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -18,9 +19,11 @@ public class PubSubController {
 
     private static final Logger log = LoggerFactory.getLogger(PubSubController.class);
     private final RabbitTemplate rabbitTemplate;
+    private final MessageStore store;
 
-    public PubSubController(RabbitTemplate rabbitTemplate) {
+    public PubSubController(RabbitTemplate rabbitTemplate, MessageStore store) {
         this.rabbitTemplate = rabbitTemplate;
+        this.store = store;
     }
 
     /**
@@ -126,5 +129,19 @@ public class PubSubController {
         // payments.#
         if (routingKey.startsWith("payments.")) matches.add("topic.payments (payments.#)");
         return matches;
+    }
+
+    @GetMapping("/received")
+    public ResponseEntity<Map<String, Object>> getReceived() {
+        return ResponseEntity.ok(Map.of(
+                "total", store.size(),
+                "messages", store.getAll()
+        ));
+    }
+
+    @DeleteMapping("/received/clear")
+    public ResponseEntity<Map<String, Object>> clearReceived() {
+        store.clear();
+        return ResponseEntity.ok(Map.of("status", "cleared"));
     }
 }

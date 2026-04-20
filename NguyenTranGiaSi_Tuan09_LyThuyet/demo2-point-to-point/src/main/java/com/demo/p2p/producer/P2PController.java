@@ -1,6 +1,7 @@
 package com.demo.p2p.producer;
 
 import com.demo.p2p.config.RabbitMQConfig;
+import com.demo.p2p.service.MessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -18,9 +19,11 @@ public class P2PController {
 
     private static final Logger log = LoggerFactory.getLogger(P2PController.class);
     private final RabbitTemplate rabbitTemplate;
+    private final MessageStore store;
 
-    public P2PController(RabbitTemplate rabbitTemplate) {
+    public P2PController(RabbitTemplate rabbitTemplate, MessageStore store) {
         this.rabbitTemplate = rabbitTemplate;
+        this.store = store;
     }
 
     /**
@@ -94,5 +97,19 @@ public class P2PController {
 
         log.info("[Work Producer] Sent single task: {}", taskName);
         return ResponseEntity.ok(Map.of("status", "sent", "queue", RabbitMQConfig.QUEUE_TASK, "task", payload));
+    }
+
+    @GetMapping("/received")
+    public ResponseEntity<Map<String, Object>> getReceived() {
+        return ResponseEntity.ok(Map.of(
+                "total", store.size(),
+                "messages", store.getAll()
+        ));
+    }
+
+    @DeleteMapping("/received/clear")
+    public ResponseEntity<Map<String, Object>> clearReceived() {
+        store.clear();
+        return ResponseEntity.ok(Map.of("status", "cleared"));
     }
 }

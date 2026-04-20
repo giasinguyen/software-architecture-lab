@@ -1,671 +1,1067 @@
-{
-	"info": {
-		"_postman_id": "mq-demos-2024",
-		"name": "Message Queue Demos - RabbitMQ",
-		"description": "Complete Postman collection for testing 3 RabbitMQ demos:\n- Demo 1: Message Broker (Direct Exchange + DLQ) - Port 8081\n- Demo 2: Point-to-Point (P2P) - Port 8082\n- Demo 3: Publish/Subscribe (Fanout + Topic) - Port 8083\n\nPrerequisites:\n1. Start RabbitMQ: docker-compose up -d\n2. Start each demo Spring Boot app on their respective ports",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"variable": [
-		{
-			"key": "broker_url",
-			"value": "http://localhost:8081",
-			"type": "string"
-		},
-		{
-			"key": "p2p_url",
-			"value": "http://localhost:8082",
-			"type": "string"
-		},
-		{
-			"key": "pubsub_url",
-			"value": "http://localhost:8083",
-			"type": "string"
-		},
-		{
-			"key": "rabbitmq_url",
-			"value": "http://localhost:15672",
-			"type": "string"
-		}
-	],
-	"item": [
-		{
-			"name": "Demo 1 - Message Broker (Direct Exchange + DLQ)",
-			"description": "Demo minh họa Message Broker pattern với Direct Exchange và Dead Letter Queue.\n- Direct Exchange route message theo routing key (info, warning, error)\n- Dead Letter Queue nhận message bị reject hoặc hết TTL",
-			"item": [
-				{
-					"name": "1.1 Send INFO log",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{broker_url}}/api/broker/send?level=info&message=Application started successfully",
-							"host": ["{{broker_url}}"],
-							"path": ["api", "broker", "send"],
-							"query": [
-								{
-									"key": "level",
-									"value": "info",
-									"description": "Log level: info, warning, error"
-								},
-								{
-									"key": "message",
-									"value": "Application started successfully",
-									"description": "Log message content"
-								}
-							]
-						},
-						"description": "Gửi log level INFO → Direct Exchange route đến queue.info → InfoLogConsumer xử lý"
-					},
-					"response": []
-				},
-				{
-					"name": "1.2 Send WARNING log",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{broker_url}}/api/broker/send?level=warning&message=Memory usage exceeds 80%",
-							"host": ["{{broker_url}}"],
-							"path": ["api", "broker", "send"],
-							"query": [
-								{
-									"key": "level",
-									"value": "warning"
-								},
-								{
-									"key": "message",
-									"value": "Memory usage exceeds 80%"
-								}
-							]
-						},
-						"description": "Gửi log level WARNING → Direct Exchange route đến queue.warning → WarningLogConsumer xử lý"
-					},
-					"response": []
-				},
-				{
-					"name": "1.3 Send ERROR log",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{broker_url}}/api/broker/send?level=error&message=Database connection failed",
-							"host": ["{{broker_url}}"],
-							"path": ["api", "broker", "send"],
-							"query": [
-								{
-									"key": "level",
-									"value": "error"
-								},
-								{
-									"key": "message",
-									"value": "Database connection failed"
-								}
-							]
-						},
-						"description": "Gửi log level ERROR → Direct Exchange route đến queue.error → ErrorLogConsumer xử lý bình thường (không forceFail)"
-					},
-					"response": []
-				},
-				{
-					"name": "1.4 Send BAD message → DLQ",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{broker_url}}/api/broker/send-bad",
-							"host": ["{{broker_url}}"],
-							"path": ["api", "broker", "send-bad"]
-						},
-						"description": "Gửi message với forceFail=true đến queue.error → ErrorLogConsumer reject → message chuyển sang Dead Letter Queue (queue.dead.letters) → DeadLetterConsumer xử lý.\n\nKiểm tra console log để thấy:\n1. ErrorLogConsumer nhận message và reject\n2. DeadLetterConsumer nhận message từ DLQ"
-					},
-					"response": []
-				},
-				{
-					"name": "1.5 Send multiple INFO logs",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{broker_url}}/api/broker/send?level=info&message=User login successful - user_001",
-							"host": ["{{broker_url}}"],
-							"path": ["api", "broker", "send"],
-							"query": [
-								{
-									"key": "level",
-									"value": "info"
-								},
-								{
-									"key": "message",
-									"value": "User login successful - user_001"
-								}
-							]
-						},
-						"description": "Gửi thêm INFO log để test routing liên tục"
-					},
-					"response": []
-				},
-				{
-					"name": "1.6 Send ERROR log (normal)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{broker_url}}/api/broker/send?level=error&message=Disk space running low",
-							"host": ["{{broker_url}}"],
-							"path": ["api", "broker", "send"],
-							"query": [
-								{
-									"key": "level",
-									"value": "error"
-								},
-								{
-									"key": "message",
-									"value": "Disk space running low"
-								}
-							]
-						},
-						"description": "Gửi ERROR log bình thường (không forceFail) → ErrorLogConsumer xử lý thành công, KHÔNG chuyển vào DLQ"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Demo 2 - Point-to-Point (P2P)",
-			"description": "Demo minh họa Point-to-Point messaging pattern:\n- Hello World: Basic message send/receive\n- Work Queue: Multiple workers competing for tasks, fair dispatch (prefetch=1), manual ACK",
-			"item": [
-				{
-					"name": "2.1 Hello World - Basic message",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{p2p_url}}/api/p2p/hello?message=Hello RabbitMQ!",
-							"host": ["{{p2p_url}}"],
-							"path": ["api", "p2p", "hello"],
-							"query": [
-								{
-									"key": "message",
-									"value": "Hello RabbitMQ!",
-									"description": "Message to send"
-								}
-							]
-						},
-						"description": "Gửi message đơn giản qua queue 'hello' → HelloConsumer nhận và ACK thủ công"
-					},
-					"response": []
-				},
-				{
-					"name": "2.2 Hello World - Vietnamese message",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{p2p_url}}/api/p2p/hello?message=Xin chào từ RabbitMQ!",
-							"host": ["{{p2p_url}}"],
-							"path": ["api", "p2p", "hello"],
-							"query": [
-								{
-									"key": "message",
-									"value": "Xin chào từ RabbitMQ!"
-								}
-							]
-						},
-						"description": "Test gửi message tiếng Việt"
-					},
-					"response": []
-				},
-				{
-					"name": "2.3 Work Queue - Send 5 tasks (batch)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{p2p_url}}/api/p2p/tasks",
-							"host": ["{{p2p_url}}"],
-							"path": ["api", "p2p", "tasks"]
-						},
-						"description": "Gửi 5 task predefined với thời gian xử lý khác nhau (1s-5s).\n\nKiểm tra console log để thấy:\n- TaskWorker1 và TaskWorker2 chia nhau xử lý (Round-Robin / Fair Dispatch)\n- prefetch=1 nên mỗi worker chỉ nhận 1 task tại một thời điểm\n- Manual ACK sau khi hoàn thành xử lý"
-					},
-					"response": []
-				},
-				{
-					"name": "2.4 Work Queue - Single task (short)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{p2p_url}}/api/p2p/tasks/single?taskName=Quick Task&durationMs=500",
-							"host": ["{{p2p_url}}"],
-							"path": ["api", "p2p", "tasks", "single"],
-							"query": [
-								{
-									"key": "taskName",
-									"value": "Quick Task",
-									"description": "Task name"
-								},
-								{
-									"key": "durationMs",
-									"value": "500",
-									"description": "Processing duration in milliseconds"
-								}
-							]
-						},
-						"description": "Gửi 1 task ngắn (500ms) → 1 trong 2 worker sẽ nhận và xử lý"
-					},
-					"response": []
-				},
-				{
-					"name": "2.5 Work Queue - Single task (long)",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{p2p_url}}/api/p2p/tasks/single?taskName=Heavy Processing Task&durationMs=8000",
-							"host": ["{{p2p_url}}"],
-							"path": ["api", "p2p", "tasks", "single"],
-							"query": [
-								{
-									"key": "taskName",
-									"value": "Heavy Processing Task"
-								},
-								{
-									"key": "durationMs",
-									"value": "8000"
-								}
-							]
-						},
-						"description": "Gửi 1 task dài (8s) → Worker xử lý lâu, trong thời gian đó worker còn lại sẽ nhận task khác nếu có"
-					},
-					"response": []
-				},
-				{
-					"name": "2.6 Work Queue - Send batch then single",
-					"request": {
-						"method": "POST",
-						"header": [],
-						"url": {
-							"raw": "{{p2p_url}}/api/p2p/tasks/single?taskName=Extra Task After Batch&durationMs=2000",
-							"host": ["{{p2p_url}}"],
-							"path": ["api", "p2p", "tasks", "single"],
-							"query": [
-								{
-									"key": "taskName",
-									"value": "Extra Task After Batch"
-								},
-								{
-									"key": "durationMs",
-									"value": "2000"
-								}
-							]
-						},
-						"description": "Gửi sau batch để quan sát fair dispatch - worker nào rảnh sẽ nhận task này"
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Demo 3 - Publish/Subscribe (Fanout + Topic)",
-			"description": "Demo minh họa Pub/Sub pattern:\n- Fanout Exchange: Broadcast message đến TẤT CẢ subscriber (email, inventory, analytics)\n- Topic Exchange: Route message theo pattern matching (orders.#, *.created.*, payments.#)",
-			"item": [
-				{
-					"name": "Fanout Exchange",
-					"description": "Fanout Exchange broadcast message đến tất cả queues được bind, không quan tâm routing key",
-					"item": [
-						{
-							"name": "3.1 Fanout - Broadcast order event",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/fanout",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "fanout"]
-								},
-								"description": "Broadcast order event đến Fanout Exchange → TẤT CẢ 3 subscriber nhận:\n1. EmailSubscriber → Gửi email xác nhận đơn hàng\n2. InventorySubscriber → Cập nhật tồn kho\n3. AnalyticsSubscriber → Ghi nhận analytics\n\nKiểm tra console log để thấy cả 3 consumer đều nhận cùng 1 message"
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Topic Exchange",
-					"description": "Topic Exchange route message theo routing key pattern:\n- orders.# → Nhận tất cả message bắt đầu bằng 'orders'\n- *.created.* → Nhận message có 'created' ở giữa\n- payments.# → Nhận tất cả message bắt đầu bằng 'payments'",
-					"item": [
-						{
-							"name": "3.2 Topic - orders.created.vn",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/topic?routingKey=orders.created.vn&message=Order ORD-001 created in Vietnam",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "topic"],
-									"query": [
-										{
-											"key": "routingKey",
-											"value": "orders.created.vn",
-											"description": "Routing key for topic exchange"
-										},
-										{
-											"key": "message",
-											"value": "Order ORD-001 created in Vietnam"
-										}
-									]
-								},
-								"description": "Routing key: orders.created.vn\nMatches:\n- orders.# (OrderTopicSubscriber) ✅\n- *.created.* (CreatedTopicSubscriber) ✅\n- payments.# (PaymentTopicSubscriber) ❌\n\n→ 2 subscribers nhận message"
-							},
-							"response": []
-						},
-						{
-							"name": "3.3 Topic - orders.shipped.vn",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/topic?routingKey=orders.shipped.vn&message=Order ORD-002 shipped to Ho Chi Minh",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "topic"],
-									"query": [
-										{
-											"key": "routingKey",
-											"value": "orders.shipped.vn"
-										},
-										{
-											"key": "message",
-											"value": "Order ORD-002 shipped to Ho Chi Minh"
-										}
-									]
-								},
-								"description": "Routing key: orders.shipped.vn\nMatches:\n- orders.# (OrderTopicSubscriber) ✅\n- *.created.* (CreatedTopicSubscriber) ❌ (shipped ≠ created)\n- payments.# (PaymentTopicSubscriber) ❌\n\n→ Chỉ 1 subscriber nhận"
-							},
-							"response": []
-						},
-						{
-							"name": "3.4 Topic - payments.success.vn",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/topic?routingKey=payments.success.vn&message=Payment PAY-001 successful - 500000 VND",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "topic"],
-									"query": [
-										{
-											"key": "routingKey",
-											"value": "payments.success.vn"
-										},
-										{
-											"key": "message",
-											"value": "Payment PAY-001 successful - 500000 VND"
-										}
-									]
-								},
-								"description": "Routing key: payments.success.vn\nMatches:\n- orders.# (OrderTopicSubscriber) ❌\n- *.created.* (CreatedTopicSubscriber) ❌\n- payments.# (PaymentTopicSubscriber) ✅\n\n→ Chỉ 1 subscriber nhận"
-							},
-							"response": []
-						},
-						{
-							"name": "3.5 Topic - payments.failed.vn",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/topic?routingKey=payments.failed.vn&message=Payment PAY-002 failed - insufficient balance",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "topic"],
-									"query": [
-										{
-											"key": "routingKey",
-											"value": "payments.failed.vn"
-										},
-										{
-											"key": "message",
-											"value": "Payment PAY-002 failed - insufficient balance"
-										}
-									]
-								},
-								"description": "Routing key: payments.failed.vn\nMatches:\n- payments.# (PaymentTopicSubscriber) ✅\n\n→ Chỉ PaymentTopicSubscriber nhận"
-							},
-							"response": []
-						},
-						{
-							"name": "3.6 Topic - orders.created.sg",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/topic?routingKey=orders.created.sg&message=Order ORD-003 created in Singapore",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "topic"],
-									"query": [
-										{
-											"key": "routingKey",
-											"value": "orders.created.sg"
-										},
-										{
-											"key": "message",
-											"value": "Order ORD-003 created in Singapore"
-										}
-									]
-								},
-								"description": "Routing key: orders.created.sg\nMatches:\n- orders.# (OrderTopicSubscriber) ✅\n- *.created.* (CreatedTopicSubscriber) ✅\n\n→ 2 subscribers nhận (giống orders.created.vn)"
-							},
-							"response": []
-						},
-						{
-							"name": "3.7 Topic - inventory.created.vn",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/topic?routingKey=inventory.created.vn&message=New inventory item added in Vietnam",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "topic"],
-									"query": [
-										{
-											"key": "routingKey",
-											"value": "inventory.created.vn"
-										},
-										{
-											"key": "message",
-											"value": "New inventory item added in Vietnam"
-										}
-									]
-								},
-								"description": "Routing key: inventory.created.vn\nMatches:\n- orders.# ❌ (inventory ≠ orders)\n- *.created.* ✅ (created ở giữa)\n- payments.# ❌\n\n→ Chỉ CreatedTopicSubscriber nhận. Test case hay để thấy wildcard * match bất kỳ word nào"
-							},
-							"response": []
-						},
-						{
-							"name": "3.8 Topic - unknown.unknown.vn (no match)",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/topic?routingKey=unknown.unknown.vn&message=This should not be received by anyone",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "topic"],
-									"query": [
-										{
-											"key": "routingKey",
-											"value": "unknown.unknown.vn"
-										},
-										{
-											"key": "message",
-											"value": "This should not be received by anyone"
-										}
-									]
-								},
-								"description": "Routing key: unknown.unknown.vn\nMatches:\n- orders.# ❌\n- *.created.* ❌\n- payments.# ❌\n\n→ KHÔNG subscriber nào nhận! Message bị discard. Test case để thấy topic exchange filtering."
-							},
-							"response": []
-						}
-					]
-				},
-				{
-					"name": "Simulate All Events",
-					"description": "Gửi batch 5 events khác nhau để quan sát toàn bộ routing behavior",
-					"item": [
-						{
-							"name": "3.9 Simulate - All 5 topic events",
-							"request": {
-								"method": "POST",
-								"header": [],
-								"url": {
-									"raw": "{{pubsub_url}}/api/pubsub/simulate",
-									"host": ["{{pubsub_url}}"],
-									"path": ["api", "pubsub", "simulate"]
-								},
-								"description": "Gửi 5 events cùng lúc với routing keys:\n1. orders.created.vn → OrderTopic + CreatedTopic\n2. orders.shipped.vn → OrderTopic\n3. orders.created.sg → OrderTopic + CreatedTopic\n4. payments.success.vn → PaymentTopic\n5. payments.failed.vn → PaymentTopic\n\nKiểm tra console log để thấy:\n- OrderTopicSubscriber nhận 3 messages (orders.*)\n- CreatedTopicSubscriber nhận 2 messages (*.created.*)\n- PaymentTopicSubscriber nhận 2 messages (payments.*)"
-							},
-							"response": []
-						}
-					]
-				}
-			]
-		},
-		{
-			"name": "RabbitMQ Management API",
-			"description": "API để kiểm tra trạng thái RabbitMQ Management (port 15672).\nCredentials: admin / admin123",
-			"item": [
-				{
-					"name": "4.1 Health Check - Overview",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{rabbitmq_url}}/api/overview",
-							"host": ["{{rabbitmq_url}}"],
-							"path": ["api", "overview"]
-						},
-						"auth": {
-							"type": "basic",
-							"basic": [
-								{
-									"key": "username",
-									"value": "admin"
-								},
-								{
-									"key": "password",
-									"value": "admin123"
-								}
-							]
-						},
-						"description": "Kiểm tra RabbitMQ overview: version, cluster name, statistics"
-					},
-					"response": []
-				},
-				{
-					"name": "4.2 List all Queues",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{rabbitmq_url}}/api/queues",
-							"host": ["{{rabbitmq_url}}"],
-							"path": ["api", "queues"]
-						},
-						"auth": {
-							"type": "basic",
-							"basic": [
-								{
-									"key": "username",
-									"value": "admin"
-								},
-								{
-									"key": "password",
-									"value": "admin123"
-								}
-							]
-						},
-						"description": "Liệt kê tất cả queues: tên, số message, consumers, state.\nSau khi chạy cả 3 demo, sẽ thấy:\n- queue.info, queue.warning, queue.error, queue.dead.letters (Demo 1)\n- hello, task_queue (Demo 2)\n- fanout.email, fanout.inventory, fanout.analytics, topic.orders, topic.created, topic.payments (Demo 3)"
-					},
-					"response": []
-				},
-				{
-					"name": "4.3 List all Exchanges",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{rabbitmq_url}}/api/exchanges",
-							"host": ["{{rabbitmq_url}}"],
-							"path": ["api", "exchanges"]
-						},
-						"auth": {
-							"type": "basic",
-							"basic": [
-								{
-									"key": "username",
-									"value": "admin"
-								},
-								{
-									"key": "password",
-									"value": "admin123"
-								}
-							]
-						},
-						"description": "Liệt kê tất cả exchanges.\nCustom exchanges:\n- logs.direct (direct) - Demo 1\n- logs.dlx (direct) - Demo 1 DLX\n- order_events (fanout) - Demo 3\n- app_events (topic) - Demo 3"
-					},
-					"response": []
-				},
-				{
-					"name": "4.4 List all Bindings",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{rabbitmq_url}}/api/bindings",
-							"host": ["{{rabbitmq_url}}"],
-							"path": ["api", "bindings"]
-						},
-						"auth": {
-							"type": "basic",
-							"basic": [
-								{
-									"key": "username",
-									"value": "admin"
-								},
-								{
-									"key": "password",
-									"value": "admin123"
-								}
-							]
-						},
-						"description": "Liệt kê tất cả bindings giữa exchanges và queues.\nCho thấy routing key patterns và exchange-queue relationships"
-					},
-					"response": []
-				},
-				{
-					"name": "4.5 List Connections",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{rabbitmq_url}}/api/connections",
-							"host": ["{{rabbitmq_url}}"],
-							"path": ["api", "connections"]
-						},
-						"auth": {
-							"type": "basic",
-							"basic": [
-								{
-									"key": "username",
-									"value": "admin"
-								},
-								{
-									"key": "password",
-									"value": "admin123"
-								}
-							]
-						},
-						"description": "Liệt kê tất cả connections đến RabbitMQ.\nMỗi Spring Boot app tạo 1+ connections"
-					},
-					"response": []
-				}
-			]
-		}
-	]
+﻿{
+    "info":  {
+                 "_postman_id":  "mq-demos-2024",
+                 "name":  "Message Queue Demos - RabbitMQ",
+                 "description":  "Complete Postman collection for testing 3 RabbitMQ demos:\n- Demo 1: Message Broker (Direct Exchange + DLQ) - Port 8081\n- Demo 2: Point-to-Point (P2P) - Port 8082\n- Demo 3: Publish/Subscribe (Fanout + Topic) - Port 8083\n\nPrerequisites:\n1. Start RabbitMQ: docker-compose up -d\n2. Start each demo Spring Boot app on their respective ports",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+             },
+    "variable":  [
+                     {
+                         "key":  "broker_url",
+                         "value":  "http://localhost:8081",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "p2p_url",
+                         "value":  "http://localhost:8082",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "pubsub_url",
+                         "value":  "http://localhost:8083",
+                         "type":  "string"
+                     },
+                     {
+                         "key":  "rabbitmq_url",
+                         "value":  "http://localhost:15672",
+                         "type":  "string"
+                     }
+                 ],
+    "item":  [
+                 {
+                     "name":  "Demo 1 - Message Broker (Direct Exchange + DLQ)",
+                     "description":  "Demo minh há»a Message Broker pattern vá»›i Direct Exchange vÃ  Dead Letter Queue.\n- Direct Exchange route message theo routing key (info, warning, error)\n- Dead Letter Queue nháº­n message bá»‹ reject hoáº·c háº¿t TTL",
+                     "item":  [
+                                  {
+                                      "name":  "1.1 Send INFO log",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{broker_url}}/api/broker/send?level=info\u0026message=Application started successfully",
+                                                                  "host":  [
+                                                                               "{{broker_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "broker",
+                                                                               "send"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "level",
+                                                                                    "value":  "info",
+                                                                                    "description":  "Log level: info, warning, error"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "message",
+                                                                                    "value":  "Application started successfully",
+                                                                                    "description":  "Log message content"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i log level INFO â†’ Direct Exchange route Ä‘áº¿n queue.info â†’ InfoLogConsumer xá»­ lÃ½"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "1.2 Send WARNING log",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{broker_url}}/api/broker/send?level=warning\u0026message=Memory usage exceeds 80%",
+                                                                  "host":  [
+                                                                               "{{broker_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "broker",
+                                                                               "send"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "level",
+                                                                                    "value":  "warning"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "message",
+                                                                                    "value":  "Memory usage exceeds 80%"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i log level WARNING â†’ Direct Exchange route Ä‘áº¿n queue.warning â†’ WarningLogConsumer xá»­ lÃ½"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "1.3 Send ERROR log",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{broker_url}}/api/broker/send?level=error\u0026message=Database connection failed",
+                                                                  "host":  [
+                                                                               "{{broker_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "broker",
+                                                                               "send"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "level",
+                                                                                    "value":  "error"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "message",
+                                                                                    "value":  "Database connection failed"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i log level ERROR â†’ Direct Exchange route Ä‘áº¿n queue.error â†’ ErrorLogConsumer xá»­ lÃ½ bÃ¬nh thÆ°á»ng (khÃ´ng forceFail)"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "1.4 Send BAD message â†’ DLQ",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{broker_url}}/api/broker/send-bad",
+                                                                  "host":  [
+                                                                               "{{broker_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "broker",
+                                                                               "send-bad"
+                                                                           ]
+                                                              },
+                                                      "description":  "Gá»­i message vá»›i forceFail=true Ä‘áº¿n queue.error â†’ ErrorLogConsumer reject â†’ message chuyá»ƒn sang Dead Letter Queue (queue.dead.letters) â†’ DeadLetterConsumer xá»­ lÃ½.\n\nKiá»ƒm tra console log Ä‘á»ƒ tháº¥y:\n1. ErrorLogConsumer nháº­n message vÃ  reject\n2. DeadLetterConsumer nháº­n message tá»« DLQ"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "1.5 Send multiple INFO logs",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{broker_url}}/api/broker/send?level=info\u0026message=User login successful - user_001",
+                                                                  "host":  [
+                                                                               "{{broker_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "broker",
+                                                                               "send"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "level",
+                                                                                    "value":  "info"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "message",
+                                                                                    "value":  "User login successful - user_001"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i thÃªm INFO log Ä‘á»ƒ test routing liÃªn tá»¥c"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "1.6 Send ERROR log (normal)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{broker_url}}/api/broker/send?level=error\u0026message=Disk space running low",
+                                                                  "host":  [
+                                                                               "{{broker_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "broker",
+                                                                               "send"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "level",
+                                                                                    "value":  "error"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "message",
+                                                                                    "value":  "Disk space running low"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i ERROR log bÃ¬nh thÆ°á»ng (khÃ´ng forceFail) â†’ ErrorLogConsumer xá»­ lÃ½ thÃ nh cÃ´ng, KHÃ”NG chuyá»ƒn vÃ o DLQ"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "1.7 GET Received Messages",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "http://localhost:8081/api/broker/received",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "localhost"
+                                                                           ],
+                                                                  "port":  "8081",
+                                                                  "path":  [
+                                                                               ""
+                                                                           ]
+                                                              }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "1.8 CLEAR Received Messages",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "http://localhost:8081/api/broker/received/clear",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "localhost"
+                                                                           ],
+                                                                  "port":  "8081",
+                                                                  "path":  [
+                                                                               ""
+                                                                           ]
+                                                              }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Demo 2 - Point-to-Point (P2P)",
+                     "description":  "Demo minh há»a Point-to-Point messaging pattern:\n- Hello World: Basic message send/receive\n- Work Queue: Multiple workers competing for tasks, fair dispatch (prefetch=1), manual ACK",
+                     "item":  [
+                                  {
+                                      "name":  "2.1 Hello World - Basic message",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{p2p_url}}/api/p2p/hello?message=Hello RabbitMQ!",
+                                                                  "host":  [
+                                                                               "{{p2p_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "p2p",
+                                                                               "hello"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "message",
+                                                                                    "value":  "Hello RabbitMQ!",
+                                                                                    "description":  "Message to send"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i message Ä‘Æ¡n giáº£n qua queue \u0027hello\u0027 â†’ HelloConsumer nháº­n vÃ  ACK thá»§ cÃ´ng"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "2.2 Hello World - Vietnamese message",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{p2p_url}}/api/p2p/hello?message=Xin chÃ o tá»« RabbitMQ!",
+                                                                  "host":  [
+                                                                               "{{p2p_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "p2p",
+                                                                               "hello"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "message",
+                                                                                    "value":  "Xin chÃ o tá»« RabbitMQ!"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Test gá»­i message tiáº¿ng Viá»‡t"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "2.3 Work Queue - Send 5 tasks (batch)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{p2p_url}}/api/p2p/tasks",
+                                                                  "host":  [
+                                                                               "{{p2p_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "p2p",
+                                                                               "tasks"
+                                                                           ]
+                                                              },
+                                                      "description":  "Gá»­i 5 task predefined vá»›i thá»i gian xá»­ lÃ½ khÃ¡c nhau (1s-5s).\n\nKiá»ƒm tra console log Ä‘á»ƒ tháº¥y:\n- TaskWorker1 vÃ  TaskWorker2 chia nhau xá»­ lÃ½ (Round-Robin / Fair Dispatch)\n- prefetch=1 nÃªn má»—i worker chá»‰ nháº­n 1 task táº¡i má»™t thá»i Ä‘iá»ƒm\n- Manual ACK sau khi hoÃ n thÃ nh xá»­ lÃ½"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "2.4 Work Queue - Single task (short)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{p2p_url}}/api/p2p/tasks/single?taskName=Quick Task\u0026durationMs=500",
+                                                                  "host":  [
+                                                                               "{{p2p_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "p2p",
+                                                                               "tasks",
+                                                                               "single"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "taskName",
+                                                                                    "value":  "Quick Task",
+                                                                                    "description":  "Task name"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "durationMs",
+                                                                                    "value":  "500",
+                                                                                    "description":  "Processing duration in milliseconds"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i 1 task ngáº¯n (500ms) â†’ 1 trong 2 worker sáº½ nháº­n vÃ  xá»­ lÃ½"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "2.5 Work Queue - Single task (long)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{p2p_url}}/api/p2p/tasks/single?taskName=Heavy Processing Task\u0026durationMs=8000",
+                                                                  "host":  [
+                                                                               "{{p2p_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "p2p",
+                                                                               "tasks",
+                                                                               "single"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "taskName",
+                                                                                    "value":  "Heavy Processing Task"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "durationMs",
+                                                                                    "value":  "8000"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i 1 task dÃ i (8s) â†’ Worker xá»­ lÃ½ lÃ¢u, trong thá»i gian Ä‘Ã³ worker cÃ²n láº¡i sáº½ nháº­n task khÃ¡c náº¿u cÃ³"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "2.6 Work Queue - Send batch then single",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{p2p_url}}/api/p2p/tasks/single?taskName=Extra Task After Batch\u0026durationMs=2000",
+                                                                  "host":  [
+                                                                               "{{p2p_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "p2p",
+                                                                               "tasks",
+                                                                               "single"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "taskName",
+                                                                                    "value":  "Extra Task After Batch"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "durationMs",
+                                                                                    "value":  "2000"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Gá»­i sau batch Ä‘á»ƒ quan sÃ¡t fair dispatch - worker nÃ o ráº£nh sáº½ nháº­n task nÃ y"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "2.7 GET Received Messages",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "http://localhost:8082/api/p2p/received",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "localhost"
+                                                                           ],
+                                                                  "port":  "8082",
+                                                                  "path":  [
+                                                                               ""
+                                                                           ]
+                                                              }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "2.8 CLEAR Received Messages",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "http://localhost:8082/api/p2p/received/clear",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "localhost"
+                                                                           ],
+                                                                  "port":  "8082",
+                                                                  "path":  [
+                                                                               ""
+                                                                           ]
+                                                              }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Demo 3 - Publish/Subscribe (Fanout + Topic)",
+                     "description":  "Demo minh há»a Pub/Sub pattern:\n- Fanout Exchange: Broadcast message Ä‘áº¿n Táº¤T Cáº¢ subscriber (email, inventory, analytics)\n- Topic Exchange: Route message theo pattern matching (orders.#, *.created.*, payments.#)",
+                     "item":  [
+                                  {
+                                      "name":  "Fanout Exchange",
+                                      "description":  "Fanout Exchange broadcast message Ä‘áº¿n táº¥t cáº£ queues Ä‘Æ°á»£c bind, khÃ´ng quan tÃ¢m routing key",
+                                      "item":  [
+                                                   {
+                                                       "name":  "3.1 Fanout - Broadcast order event",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/fanout",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "fanout"
+                                                                                            ]
+                                                                               },
+                                                                       "description":  "Broadcast order event Ä‘áº¿n Fanout Exchange â†’ Táº¤T Cáº¢ 3 subscriber nháº­n:\n1. EmailSubscriber â†’ Gá»­i email xÃ¡c nháº­n Ä‘Æ¡n hÃ ng\n2. InventorySubscriber â†’ Cáº­p nháº­t tá»“n kho\n3. AnalyticsSubscriber â†’ Ghi nháº­n analytics\n\nKiá»ƒm tra console log Ä‘á»ƒ tháº¥y cáº£ 3 consumer Ä‘á»u nháº­n cÃ¹ng 1 message"
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   }
+                                               ]
+                                  },
+                                  {
+                                      "name":  "Topic Exchange",
+                                      "description":  "Topic Exchange route message theo routing key pattern:\n- orders.# â†’ Nháº­n táº¥t cáº£ message báº¯t Ä‘áº§u báº±ng \u0027orders\u0027\n- *.created.* â†’ Nháº­n message cÃ³ \u0027created\u0027 á»Ÿ giá»¯a\n- payments.# â†’ Nháº­n táº¥t cáº£ message báº¯t Ä‘áº§u báº±ng \u0027payments\u0027",
+                                      "item":  [
+                                                   {
+                                                       "name":  "3.2 Topic - orders.created.vn",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/topic?routingKey=orders.created.vn\u0026message=Order ORD-001 created in Vietnam",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "topic"
+                                                                                            ],
+                                                                                   "query":  [
+                                                                                                 {
+                                                                                                     "key":  "routingKey",
+                                                                                                     "value":  "orders.created.vn",
+                                                                                                     "description":  "Routing key for topic exchange"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "key":  "message",
+                                                                                                     "value":  "Order ORD-001 created in Vietnam"
+                                                                                                 }
+                                                                                             ]
+                                                                               },
+                                                                       "description":  "Routing key: orders.created.vn\nMatches:\n- orders.# (OrderTopicSubscriber) âœ…\n- *.created.* (CreatedTopicSubscriber) âœ…\n- payments.# (PaymentTopicSubscriber) âŒ\n\nâ†’ 2 subscribers nháº­n message"
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   },
+                                                   {
+                                                       "name":  "3.3 Topic - orders.shipped.vn",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/topic?routingKey=orders.shipped.vn\u0026message=Order ORD-002 shipped to Ho Chi Minh",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "topic"
+                                                                                            ],
+                                                                                   "query":  [
+                                                                                                 {
+                                                                                                     "key":  "routingKey",
+                                                                                                     "value":  "orders.shipped.vn"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "key":  "message",
+                                                                                                     "value":  "Order ORD-002 shipped to Ho Chi Minh"
+                                                                                                 }
+                                                                                             ]
+                                                                               },
+                                                                       "description":  "Routing key: orders.shipped.vn\nMatches:\n- orders.# (OrderTopicSubscriber) âœ…\n- *.created.* (CreatedTopicSubscriber) âŒ (shipped â‰  created)\n- payments.# (PaymentTopicSubscriber) âŒ\n\nâ†’ Chá»‰ 1 subscriber nháº­n"
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   },
+                                                   {
+                                                       "name":  "3.4 Topic - payments.success.vn",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/topic?routingKey=payments.success.vn\u0026message=Payment PAY-001 successful - 500000 VND",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "topic"
+                                                                                            ],
+                                                                                   "query":  [
+                                                                                                 {
+                                                                                                     "key":  "routingKey",
+                                                                                                     "value":  "payments.success.vn"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "key":  "message",
+                                                                                                     "value":  "Payment PAY-001 successful - 500000 VND"
+                                                                                                 }
+                                                                                             ]
+                                                                               },
+                                                                       "description":  "Routing key: payments.success.vn\nMatches:\n- orders.# (OrderTopicSubscriber) âŒ\n- *.created.* (CreatedTopicSubscriber) âŒ\n- payments.# (PaymentTopicSubscriber) âœ…\n\nâ†’ Chá»‰ 1 subscriber nháº­n"
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   },
+                                                   {
+                                                       "name":  "3.5 Topic - payments.failed.vn",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/topic?routingKey=payments.failed.vn\u0026message=Payment PAY-002 failed - insufficient balance",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "topic"
+                                                                                            ],
+                                                                                   "query":  [
+                                                                                                 {
+                                                                                                     "key":  "routingKey",
+                                                                                                     "value":  "payments.failed.vn"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "key":  "message",
+                                                                                                     "value":  "Payment PAY-002 failed - insufficient balance"
+                                                                                                 }
+                                                                                             ]
+                                                                               },
+                                                                       "description":  "Routing key: payments.failed.vn\nMatches:\n- payments.# (PaymentTopicSubscriber) âœ…\n\nâ†’ Chá»‰ PaymentTopicSubscriber nháº­n"
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   },
+                                                   {
+                                                       "name":  "3.6 Topic - orders.created.sg",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/topic?routingKey=orders.created.sg\u0026message=Order ORD-003 created in Singapore",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "topic"
+                                                                                            ],
+                                                                                   "query":  [
+                                                                                                 {
+                                                                                                     "key":  "routingKey",
+                                                                                                     "value":  "orders.created.sg"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "key":  "message",
+                                                                                                     "value":  "Order ORD-003 created in Singapore"
+                                                                                                 }
+                                                                                             ]
+                                                                               },
+                                                                       "description":  "Routing key: orders.created.sg\nMatches:\n- orders.# (OrderTopicSubscriber) âœ…\n- *.created.* (CreatedTopicSubscriber) âœ…\n\nâ†’ 2 subscribers nháº­n (giá»‘ng orders.created.vn)"
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   },
+                                                   {
+                                                       "name":  "3.7 Topic - inventory.created.vn",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/topic?routingKey=inventory.created.vn\u0026message=New inventory item added in Vietnam",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "topic"
+                                                                                            ],
+                                                                                   "query":  [
+                                                                                                 {
+                                                                                                     "key":  "routingKey",
+                                                                                                     "value":  "inventory.created.vn"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "key":  "message",
+                                                                                                     "value":  "New inventory item added in Vietnam"
+                                                                                                 }
+                                                                                             ]
+                                                                               },
+                                                                       "description":  "Routing key: inventory.created.vn\nMatches:\n- orders.# âŒ (inventory â‰  orders)\n- *.created.* âœ… (created á»Ÿ giá»¯a)\n- payments.# âŒ\n\nâ†’ Chá»‰ CreatedTopicSubscriber nháº­n. Test case hay Ä‘á»ƒ tháº¥y wildcard * match báº¥t ká»³ word nÃ o"
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   },
+                                                   {
+                                                       "name":  "3.8 Topic - unknown.unknown.vn (no match)",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/topic?routingKey=unknown.unknown.vn\u0026message=This should not be received by anyone",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "topic"
+                                                                                            ],
+                                                                                   "query":  [
+                                                                                                 {
+                                                                                                     "key":  "routingKey",
+                                                                                                     "value":  "unknown.unknown.vn"
+                                                                                                 },
+                                                                                                 {
+                                                                                                     "key":  "message",
+                                                                                                     "value":  "This should not be received by anyone"
+                                                                                                 }
+                                                                                             ]
+                                                                               },
+                                                                       "description":  "Routing key: unknown.unknown.vn\nMatches:\n- orders.# âŒ\n- *.created.* âŒ\n- payments.# âŒ\n\nâ†’ KHÃ”NG subscriber nÃ o nháº­n! Message bá»‹ discard. Test case Ä‘á»ƒ tháº¥y topic exchange filtering."
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   }
+                                               ]
+                                  },
+                                  {
+                                      "name":  "Simulate All Events",
+                                      "description":  "Gá»­i batch 5 events khÃ¡c nhau Ä‘á»ƒ quan sÃ¡t toÃ n bá»™ routing behavior",
+                                      "item":  [
+                                                   {
+                                                       "name":  "3.9 Simulate - All 5 topic events",
+                                                       "request":  {
+                                                                       "method":  "POST",
+                                                                       "header":  [
+
+                                                                                  ],
+                                                                       "url":  {
+                                                                                   "raw":  "{{pubsub_url}}/api/pubsub/simulate",
+                                                                                   "host":  [
+                                                                                                "{{pubsub_url}}"
+                                                                                            ],
+                                                                                   "path":  [
+                                                                                                "api",
+                                                                                                "pubsub",
+                                                                                                "simulate"
+                                                                                            ]
+                                                                               },
+                                                                       "description":  "Gá»­i 5 events cÃ¹ng lÃºc vá»›i routing keys:\n1. orders.created.vn â†’ OrderTopic + CreatedTopic\n2. orders.shipped.vn â†’ OrderTopic\n3. orders.created.sg â†’ OrderTopic + CreatedTopic\n4. payments.success.vn â†’ PaymentTopic\n5. payments.failed.vn â†’ PaymentTopic\n\nKiá»ƒm tra console log Ä‘á»ƒ tháº¥y:\n- OrderTopicSubscriber nháº­n 3 messages (orders.*)\n- CreatedTopicSubscriber nháº­n 2 messages (*.created.*)\n- PaymentTopicSubscriber nháº­n 2 messages (payments.*)"
+                                                                   },
+                                                       "response":  [
+
+                                                                    ]
+                                                   }
+                                               ]
+                                  },
+                                  {
+                                      "name":  "3.7 GET Received Messages",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "http://localhost:8083/api/pubsub/received",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "localhost"
+                                                                           ],
+                                                                  "port":  "8083",
+                                                                  "path":  [
+                                                                               ""
+                                                                           ]
+                                                              }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "3.8 CLEAR Received Messages",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "http://localhost:8083/api/pubsub/received/clear",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "localhost"
+                                                                           ],
+                                                                  "port":  "8083",
+                                                                  "path":  [
+                                                                               ""
+                                                                           ]
+                                                              }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "RabbitMQ Management API",
+                     "description":  "API Ä‘á»ƒ kiá»ƒm tra tráº¡ng thÃ¡i RabbitMQ Management (port 15672).\nCredentials: admin / admin123",
+                     "item":  [
+                                  {
+                                      "name":  "4.1 Health Check - Overview",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{rabbitmq_url}}/api/overview",
+                                                                  "host":  [
+                                                                               "{{rabbitmq_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "overview"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "basic",
+                                                                   "basic":  [
+                                                                                 {
+                                                                                     "key":  "username",
+                                                                                     "value":  "admin"
+                                                                                 },
+                                                                                 {
+                                                                                     "key":  "password",
+                                                                                     "value":  "admin123"
+                                                                                 }
+                                                                             ]
+                                                               },
+                                                      "description":  "Kiá»ƒm tra RabbitMQ overview: version, cluster name, statistics"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "4.2 List all Queues",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{rabbitmq_url}}/api/queues",
+                                                                  "host":  [
+                                                                               "{{rabbitmq_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "queues"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "basic",
+                                                                   "basic":  [
+                                                                                 {
+                                                                                     "key":  "username",
+                                                                                     "value":  "admin"
+                                                                                 },
+                                                                                 {
+                                                                                     "key":  "password",
+                                                                                     "value":  "admin123"
+                                                                                 }
+                                                                             ]
+                                                               },
+                                                      "description":  "Liá»‡t kÃª táº¥t cáº£ queues: tÃªn, sá»‘ message, consumers, state.\nSau khi cháº¡y cáº£ 3 demo, sáº½ tháº¥y:\n- queue.info, queue.warning, queue.error, queue.dead.letters (Demo 1)\n- hello, task_queue (Demo 2)\n- fanout.email, fanout.inventory, fanout.analytics, topic.orders, topic.created, topic.payments (Demo 3)"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "4.3 List all Exchanges",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{rabbitmq_url}}/api/exchanges",
+                                                                  "host":  [
+                                                                               "{{rabbitmq_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "exchanges"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "basic",
+                                                                   "basic":  [
+                                                                                 {
+                                                                                     "key":  "username",
+                                                                                     "value":  "admin"
+                                                                                 },
+                                                                                 {
+                                                                                     "key":  "password",
+                                                                                     "value":  "admin123"
+                                                                                 }
+                                                                             ]
+                                                               },
+                                                      "description":  "Liá»‡t kÃª táº¥t cáº£ exchanges.\nCustom exchanges:\n- logs.direct (direct) - Demo 1\n- logs.dlx (direct) - Demo 1 DLX\n- order_events (fanout) - Demo 3\n- app_events (topic) - Demo 3"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "4.4 List all Bindings",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{rabbitmq_url}}/api/bindings",
+                                                                  "host":  [
+                                                                               "{{rabbitmq_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "bindings"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "basic",
+                                                                   "basic":  [
+                                                                                 {
+                                                                                     "key":  "username",
+                                                                                     "value":  "admin"
+                                                                                 },
+                                                                                 {
+                                                                                     "key":  "password",
+                                                                                     "value":  "admin123"
+                                                                                 }
+                                                                             ]
+                                                               },
+                                                      "description":  "Liá»‡t kÃª táº¥t cáº£ bindings giá»¯a exchanges vÃ  queues.\nCho tháº¥y routing key patterns vÃ  exchange-queue relationships"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "4.5 List Connections",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{rabbitmq_url}}/api/connections",
+                                                                  "host":  [
+                                                                               "{{rabbitmq_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "connections"
+                                                                           ]
+                                                              },
+                                                      "auth":  {
+                                                                   "type":  "basic",
+                                                                   "basic":  [
+                                                                                 {
+                                                                                     "key":  "username",
+                                                                                     "value":  "admin"
+                                                                                 },
+                                                                                 {
+                                                                                     "key":  "password",
+                                                                                     "value":  "admin123"
+                                                                                 }
+                                                                             ]
+                                                               },
+                                                      "description":  "Liá»‡t kÃª táº¥t cáº£ connections Ä‘áº¿n RabbitMQ.\nMá»—i Spring Boot app táº¡o 1+ connections"
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 }
+             ]
 }
