@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Message Queue – Bài Giảng 6 Giờ</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #171b26;
+    --bg3: #1e2333;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #e8eaf0;
+    --text2: #9ba3b8;
+    --text3: #636b82;
+    --accent: #6c8ef7;
+    --accent2: #4ecdc4;
+    --accent3: #f7c06c;
+    --accent4: #f06c8e;
+    --green: #56d18c;
+    --red: #f07060;
+    --purple: #b07ef7;
+    --code-bg: #12151f;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 280px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 100;
+    display: flex; flex-direction: column;
+  }
+  #sidebar-header {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+  #sidebar-header h1 { font-size: 14px; font-weight: 600; color: var(--accent); letter-spacing: .04em; }
+  #sidebar-header p { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  #sidebar nav { flex: 1; padding: 12px 0; }
+  .nav-section { padding: 6px 20px 2px; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 20px;
+    font-size: 13px; color: var(--text2);
+    cursor: pointer; border: none; background: none;
+    text-align: left; width: 100%;
+    transition: all .15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(108,142,247,.08); }
+  .nav-item .badge {
+    margin-left: auto; font-size: 10px;
+    background: var(--bg3); color: var(--text3);
+    padding: 2px 6px; border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+  .nav-item.active .badge { background: rgba(108,142,247,.2); color: var(--accent); border-color: rgba(108,142,247,.3); }
+  #progress-bar-wrap { padding: 16px 20px; border-top: 1px solid var(--border); }
+  #progress-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  #progress-track { height: 4px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+  #progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width .4s; }
+
+  /* ── Main ── */
+  #main {
+    margin-left: 280px;
+    min-height: 100vh;
+    padding: 48px 56px;
+    max-width: calc(280px + 900px);
+  }
+
+  /* ── Sections ── */
+  .section { display: none; }
+  .section.visible { display: block; }
+
+  /* ── Typography ── */
+  .page-title {
+    font-size: 30px; font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.25;
+  }
+  .page-subtitle { font-size: 15px; color: var(--text2); margin-bottom: 32px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 40px 0 12px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  h3 { font-size: 16px; font-weight: 600; margin: 28px 0 10px; color: var(--accent2); }
+  h4 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; color: var(--accent3); }
+  p { margin-bottom: 12px; color: var(--text2); }
+  strong { color: var(--text); }
+  ul, ol { padding-left: 20px; margin-bottom: 12px; color: var(--text2); }
+  li { margin-bottom: 5px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin: 16px 0;
+  }
+  .card.accent-blue { border-color: rgba(108,142,247,.35); background: rgba(108,142,247,.05); }
+  .card.accent-teal { border-color: rgba(78,205,196,.35); background: rgba(78,205,196,.05); }
+  .card.accent-yellow { border-color: rgba(247,192,108,.35); background: rgba(247,192,108,.05); }
+  .card.accent-red { border-color: rgba(240,96,96,.35); background: rgba(240,96,96,.05); }
+  .card.accent-green { border-color: rgba(86,209,140,.35); background: rgba(86,209,140,.05); }
+  .card.accent-purple { border-color: rgba(176,126,247,.35); background: rgba(176,126,247,.05); }
+  .card-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .card.accent-blue .card-title { color: var(--accent); }
+  .card.accent-teal .card-title { color: var(--accent2); }
+  .card.accent-yellow .card-title { color: var(--accent3); }
+  .card.accent-red .card-title { color: var(--red); }
+  .card.accent-green .card-title { color: var(--green); }
+  .card.accent-purple .card-title { color: var(--purple); }
+
+  /* ── Code blocks ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  code { font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace; }
+  pre code { color: #c9d1e0; }
+  .kw { color: #6c8ef7; }
+  .str { color: #56d18c; }
+  .cmt { color: #4a5268; font-style: italic; }
+  .fn { color: #f7c06c; }
+  .num { color: #f06c8e; }
+  .cls { color: #4ecdc4; }
+  .var { color: #b07ef7; }
+
+  /* ── Steps ── */
+  .steps { counter-reset: step; margin: 16px 0; }
+  .step {
+    display: flex; gap: 16px; margin-bottom: 20px;
+    align-items: flex-start;
+  }
+  .step-num {
+    counter-increment: step;
+    min-width: 28px; height: 28px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-num::before { content: counter(step); }
+  .step-content h4 { margin-top: 0; color: var(--text); }
+
+  /* ── Grid layouts ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 760px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    #sidebar { display: none; }
+    #main { margin-left: 0; padding: 24px 20px; }
+  }
+
+  /* ── Tags / Badges ── */
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+  .tag {
+    font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 20px; display: inline-block;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .tag-blue { background: rgba(108,142,247,.15); color: var(--accent); border: 1px solid rgba(108,142,247,.3); }
+  .tag-teal { background: rgba(78,205,196,.15); color: var(--accent2); border: 1px solid rgba(78,205,196,.3); }
+  .tag-yellow { background: rgba(247,192,108,.15); color: var(--accent3); border: 1px solid rgba(247,192,108,.3); }
+  .tag-red { background: rgba(240,96,96,.15); color: var(--red); border: 1px solid rgba(240,96,96,.3); }
+  .tag-green { background: rgba(86,209,140,.15); color: var(--green); border: 1px solid rgba(86,209,140,.3); }
+  .tag-purple { background: rgba(176,126,247,.15); color: var(--purple); border: 1px solid rgba(176,126,247,.3); }
+
+  /* ── Diagram-like boxes ── */
+  .diagram-flow {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    margin: 20px 0;
+    display: flex; align-items: center;
+    gap: 12px; flex-wrap: wrap; justify-content: center;
+  }
+  .dbox {
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13px; font-weight: 600;
+    text-align: center;
+    min-width: 90px;
+  }
+  .dbox-blue { background: rgba(108,142,247,.2); color: var(--accent); border: 1px solid rgba(108,142,247,.4); }
+  .dbox-teal { background: rgba(78,205,196,.2); color: var(--accent2); border: 1px solid rgba(78,205,196,.4); }
+  .dbox-yellow { background: rgba(247,192,108,.2); color: var(--accent3); border: 1px solid rgba(247,192,108,.4); }
+  .dbox-red { background: rgba(240,96,96,.2); color: var(--red); border: 1px solid rgba(240,96,96,.4); }
+  .dbox-green { background: rgba(86,209,140,.2); color: var(--green); border: 1px solid rgba(86,209,140,.4); }
+  .dbox-gray { background: rgba(255,255,255,.06); color: var(--text2); border: 1px solid var(--border); }
+  .arrow { font-size: 18px; color: var(--text3); }
+
+  /* ── Timeline ── */
+  .timeline { margin: 16px 0; }
+  .timeline-item {
+    display: flex; gap: 16px; padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .timeline-item:last-child { border-bottom: none; }
+  .tl-time { min-width: 90px; font-size: 13px; font-weight: 600; color: var(--accent3); }
+  .tl-content h4 { margin: 0 0 2px; color: var(--text); font-size: 14px; }
+  .tl-content p { margin: 0; font-size: 13px; color: var(--text2); }
+
+  /* ── Comparison table ── */
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  th { background: var(--bg3); color: var(--text); font-weight: 600; padding: 10px 14px; text-align: left; border-bottom: 2px solid var(--border2); }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--border); color: var(--text2); }
+  tr:hover td { background: var(--bg3); }
+
+  /* ── Callouts ── */
+  .callout {
+    border-left: 3px solid;
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .callout-info { border-color: var(--accent); background: rgba(108,142,247,.07); }
+  .callout-warn { border-color: var(--accent3); background: rgba(247,192,108,.07); }
+  .callout-tip { border-color: var(--green); background: rgba(86,209,140,.07); }
+  .callout-danger { border-color: var(--red); background: rgba(240,96,96,.07); }
+  .callout-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
+  .callout-info .callout-label { color: var(--accent); }
+  .callout-warn .callout-label { color: var(--accent3); }
+  .callout-tip .callout-label { color: var(--green); }
+  .callout-danger .callout-label { color: var(--red); }
+
+  /* ── Navigation buttons ── */
+  .nav-buttons {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 48px; padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .btn {
+    padding: 10px 20px;
+    border-radius: var(--radius);
+    font-size: 14px; font-weight: 500;
+    cursor: pointer; border: none;
+    transition: all .15s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { opacity: .85; }
+  .btn-ghost { background: var(--bg2); color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text); }
+  .btn:disabled { opacity: .3; cursor: default; }
+
+  /* ── Hour header ── */
+  .hour-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+  .hour-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px; font-weight: 700;
+    background: rgba(108,142,247,.2); color: var(--accent);
+    border: 1px solid rgba(108,142,247,.4);
+    white-space: nowrap;
+  }
+  .hour-info h2 { font-size: 18px; margin: 0; border: none; padding: 0; color: var(--text); }
+  .hour-info p { font-size: 13px; color: var(--text2); margin: 0; }
+
+  /* ── Lab box ── */
+  .lab-box {
+    background: linear-gradient(135deg, rgba(78,205,196,.08), rgba(108,142,247,.08));
+    border: 1px solid rgba(78,205,196,.25);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    margin: 20px 0;
+  }
+  .lab-box h3 { color: var(--accent2); margin-top: 0; }
+
+  /* ── Separator ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── Welcome screen ── */
+  .welcome-hero {
+    text-align: center; padding: 40px 0 32px;
+  }
+  .welcome-hero h1 { font-size: 38px; font-weight: 800; line-height: 1.2; margin-bottom: 10px; }
+  .welcome-hero h1 span { color: var(--accent); }
+  .welcome-hero p { font-size: 16px; color: var(--text2); max-width: 560px; margin: 0 auto 24px; }
+  .welcome-stats {
+    display: flex; justify-content: center; gap: 24px; margin: 28px 0;
+    flex-wrap: wrap;
+  }
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 24px; text-align: center; min-width: 120px;
+  }
+  .stat-num { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .stat-label { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<aside id="sidebar">
+  <div id="sidebar-header">
+    <h1>📬 Message Queue</h1>
+    <p>Bài giảng 6 giờ – Kiến trúc phần mềm</p>
+  </div>
+  <nav>
+    <div class="nav-section">Tổng quan</div>
+    <button class="nav-item active" onclick="goto(0)">
+      <span>🏠</span> Giới thiệu bài giảng <span class="badge">30ph</span>
+    </button>
+
+    <div class="nav-section">Lý thuyết</div>
+    <button class="nav-item" onclick="goto(1)">
+      <span>📦</span> Giờ 1 – Khái niệm cốt lõi <span class="badge">60ph</span>
+    </button>
+    <button class="nav-item" onclick="goto(2)">
+      <span>🔀</span> Giờ 2 – Message Broker <span class="badge">60ph</span>
+    </button>
+    <button class="nav-item" onclick="goto(3)">
+      <span>📡</span> Giờ 3 – PubSub & P2P <span class="badge">60ph</span>
+    </button>
+
+    <div class="nav-section">Thực hành</div>
+    <button class="nav-item" onclick="goto(4)">
+      <span>⚙️</span> Giờ 4 – Lab RabbitMQ <span class="badge">60ph</span>
+    </button>
+    <button class="nav-item" onclick="goto(5)">
+      <span>🔥</span> Giờ 5 – Lab Apache Kafka <span class="badge">60ph</span>
+    </button>
+    <button class="nav-item" onclick="goto(6)">
+      <span>🏗️</span> Giờ 6 – Kiến trúc & So sánh <span class="badge">60ph</span>
+    </button>
+  </nav>
+  <div id="progress-bar-wrap">
+    <div id="progress-label"><span>Tiến độ</span><span id="prog-pct">0%</span></div>
+    <div id="progress-track"><div id="progress-fill" style="width:0%"></div></div>
+  </div>
+</aside>
+
+<!-- ══ MAIN CONTENT ══ -->
+<main id="main">
+
+<!-- ── Section 0: Intro ── -->
+<div class="section visible" id="s0">
+  <div class="welcome-hero">
+    <h1>Bài giảng<br><span>Message Queue</span></h1>
+    <p>Kiến trúc & Thiết kế Hệ thống Phân tán – Từ lý thuyết đến thực hành</p>
+    <div class="badge-row" style="justify-content:center">
+      <span class="tag tag-blue">Kiến trúc phần mềm</span>
+      <span class="tag tag-teal">Message Broker</span>
+      <span class="tag tag-yellow">Pub/Sub</span>
+      <span class="tag tag-green">Point-to-Point</span>
+      <span class="tag tag-purple">RabbitMQ · Kafka</span>
+    </div>
+  </div>
+
+  <div class="welcome-stats">
+    <div class="stat-card"><div class="stat-num">6</div><div class="stat-label">Tiếng học</div></div>
+    <div class="stat-card"><div class="stat-num">5</div><div class="stat-label">Chủ đề lớn</div></div>
+    <div class="stat-card"><div class="stat-num">12+</div><div class="stat-label">Ví dụ code</div></div>
+    <div class="stat-card"><div class="stat-num">2</div><div class="stat-label">Lab thực hành</div></div>
+  </div>
+
+  <h2>Mục tiêu bài giảng</h2>
+  <p>Sau khi hoàn thành bài giảng, sinh viên có thể:</p>
+  <div class="grid-2">
+    <div class="card accent-blue">
+      <div class="card-title">Hiểu biết</div>
+      <ul>
+        <li>Giải thích được Message Queue là gì và tại sao cần dùng</li>
+        <li>Phân biệt Topic, Queue, Exchange, Broker</li>
+        <li>So sánh Pub/Sub và Point-to-Point</li>
+        <li>Biết khi nào dùng RabbitMQ, khi nào dùng Kafka</li>
+      </ul>
+    </div>
+    <div class="card accent-teal">
+      <div class="card-title">Thực hành</div>
+      <ul>
+        <li>Cài đặt và cấu hình RabbitMQ bằng Docker</li>
+        <li>Viết Producer/Consumer bằng Python (pika)</li>
+        <li>Cài đặt và sử dụng Apache Kafka</li>
+        <li>Thiết kế hệ thống event-driven đơn giản</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Lịch trình 6 giờ</h2>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="tl-time">Giờ 1</div>
+      <div class="tl-content"><h4>Khái niệm cốt lõi</h4><p>Message, Queue, Topic – vì sao cần MQ, các thành phần cơ bản</p></div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">Giờ 2</div>
+      <div class="tl-content"><h4>Message Broker</h4><p>Vai trò Broker, Exchange types, Routing trong hệ thống thực tế</p></div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">Giờ 3</div>
+      <div class="tl-content"><h4>PubSub & Point-to-Point</h4><p>Hai mô hình giao tiếp, so sánh chi tiết, use cases điển hình</p></div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">Giờ 4</div>
+      <div class="tl-content"><h4>Lab RabbitMQ</h4><p>Cài Docker, viết Producer/Consumer, thực hành 4 pattern</p></div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">Giờ 5</div>
+      <div class="tl-content"><h4>Lab Apache Kafka</h4><p>Cài Kafka, Topics/Partitions, viết Producer/Consumer Python</p></div>
+    </div>
+    <div class="timeline-item">
+      <div class="tl-time">Giờ 6</div>
+      <div class="tl-content"><h4>Kiến trúc & Thiết kế</h4><p>So sánh sản phẩm, thiết kế hệ thống e-commerce, best practices</p></div>
+    </div>
+  </div>
+
+  <h2>Yêu cầu chuẩn bị</h2>
+  <div class="card accent-yellow">
+    <div class="card-title">⚙️ Môi trường cần cài đặt</div>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-content"><h4>Docker Desktop</h4><p>Tải tại <strong>docker.com</strong> – dùng để chạy RabbitMQ và Kafka dễ dàng, không cần cài thủ công</p></div></div>
+      <div class="step"><div class="step-num"></div><div class="step-content"><h4>Python 3.8+</h4><p>Kiểm tra: <code>python --version</code></p></div></div>
+      <div class="step"><div class="step-num"></div><div class="step-content"><h4>Thư viện Python</h4><p><code>pip install pika kafka-python</code></p></div></div>
+      <div class="step"><div class="step-num"></div><div class="step-content"><h4>VS Code (khuyến nghị)</h4><p>IDE với terminal tích hợp để thuận tiện chạy code song song</p></div></div>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-ghost" disabled>← Trước</button>
+    <span style="font-size:13px;color:var(--text3)">Trang 1 / 7</span>
+    <button class="btn btn-primary" onclick="goto(1)">Giờ 1: Bắt đầu →</button>
+  </div>
+</div>
+
+<!-- ── Section 1: Giờ 1 ── -->
+<div class="section" id="s1">
+  <div class="hour-header">
+    <span class="hour-badge">GIỜ 1 / 60 PHÚT</span>
+    <div class="hour-info">
+      <h2>Khái niệm cốt lõi Message Queue</h2>
+      <p>Message · Queue · Topic · Producer · Consumer</p>
+    </div>
+  </div>
+
+  <h2>1.1 Vấn đề của giao tiếp đồng bộ</h2>
+  <p>Hãy hình dung một hệ thống <strong>e-commerce</strong>: khi khách hàng đặt hàng, hệ thống cần đồng thời:</p>
+  <ul>
+    <li>Gửi email xác nhận đơn hàng</li>
+    <li>Trừ tồn kho</li>
+    <li>Thông báo cho bộ phận kho vận</li>
+    <li>Tạo hóa đơn</li>
+    <li>Cập nhật điểm tích lũy khách hàng</li>
+  </ul>
+
+  <div class="callout callout-danger">
+    <div class="callout-label">🚨 Vấn đề với kiến trúc đồng bộ (Synchronous)</div>
+    Nếu gọi tuần tự: Order API → Email Service → Inventory → Warehouse → Invoice → Loyalty... Tổng thời gian phản hồi = <strong>tổng cộng tất cả các bước</strong>. Nếu Email Service bị chậm 3 giây → khách hàng chờ 3 giây.
+  </div>
+
+  <div class="diagram-flow">
+    <div class="dbox dbox-blue">Client</div>
+    <span class="arrow">→</span>
+    <div class="dbox dbox-yellow">Order API</div>
+    <span class="arrow">→</span>
+    <div class="dbox dbox-red">Email (2s)</div>
+    <span class="arrow">→</span>
+    <div class="dbox dbox-red">Inventory (1s)</div>
+    <span class="arrow">→</span>
+    <div class="dbox dbox-red">Warehouse (2s)</div>
+    <span class="arrow">⟹</span>
+    <div class="dbox dbox-red">5s total ⚠️</div>
+  </div>
+
+  <h3>Giải pháp: Giao tiếp bất đồng bộ qua Message Queue</h3>
+  <div class="diagram-flow">
+    <div class="dbox dbox-blue">Client</div>
+    <span class="arrow">→</span>
+    <div class="dbox dbox-yellow">Order API</div>
+    <span class="arrow">→</span>
+    <div class="dbox dbox-teal">📬 Message Queue</div>
+    <span class="arrow">→</span>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="dbox dbox-green" style="font-size:11px">Email Worker</div>
+      <div class="dbox dbox-green" style="font-size:11px">Inventory Worker</div>
+      <div class="dbox dbox-green" style="font-size:11px">Warehouse Worker</div>
+    </div>
+  </div>
+  <p style="text-align:center;color:var(--green)"><strong>✓ Order API phản hồi ngay lập tức (~50ms), các worker xử lý song song phía sau</strong></p>
+
+  <h2>1.2 Các khái niệm cơ bản</h2>
+
+  <div class="grid-2">
+    <div class="card accent-blue">
+      <div class="card-title">📨 Message (Tin nhắn)</div>
+      <p>Đơn vị dữ liệu được truyền giữa các thành phần. Một message bao gồm:</p>
+      <ul>
+        <li><strong>Header:</strong> metadata (routing key, content-type, timestamp...)</li>
+        <li><strong>Body:</strong> nội dung thực tế (JSON, XML, binary...)</li>
+        <li><strong>Properties:</strong> TTL, priority, delivery mode...</li>
+      </ul>
+    </div>
+    <div class="card accent-teal">
+      <div class="card-title">📦 Queue (Hàng đợi)</div>
+      <p>Bộ nhớ đệm lưu trữ message theo thứ tự <strong>FIFO</strong> (First In, First Out). Queue đảm bảo:</p>
+      <ul>
+        <li>Message không bị mất nếu consumer tạm thời không hoạt động</li>
+        <li>Kiểm soát tốc độ xử lý (backpressure)</li>
+        <li>Phân phối tải đều giữa nhiều consumer</li>
+      </ul>
+    </div>
+    <div class="card accent-yellow">
+      <div class="card-title">📡 Topic (Chủ đề)</div>
+      <p>Kênh logic phân loại message theo chủ đề. Ví dụ:</p>
+      <ul>
+        <li><code>orders.created</code> – đơn hàng mới</li>
+        <li><code>orders.shipped</code> – đơn hàng đã giao</li>
+        <li><code>payments.success</code> – thanh toán thành công</li>
+        <li><code>inventory.low_stock</code> – tồn kho thấp</li>
+      </ul>
+    </div>
+    <div class="card accent-green">
+      <div class="card-title">🏭 Producer & Consumer</div>
+      <p><strong>Producer</strong> (Publisher): Thành phần gửi message vào queue/topic.</p>
+      <p><strong>Consumer</strong> (Subscriber): Thành phần nhận và xử lý message.</p>
+      <p>Hai bên <strong>không cần biết về nhau</strong> – đây là nguyên tắc <em>loose coupling</em></p>
+    </div>
+  </div>
+
+  <h2>1.3 Ví dụ minh họa: Message đơn giản</h2>
+  <p>Cấu trúc một message JSON điển hình trong hệ thống đặt hàng:</p>
+  <pre><code><span class="cmt">// Ví dụ 1.1 – Cấu trúc một Message</span>
+{
+  <span class="str">"message_id"</span>: <span class="str">"msg-20250413-001"</span>,
+  <span class="str">"timestamp"</span>: <span class="str">"2025-04-13T08:00:00Z"</span>,
+  <span class="str">"routing_key"</span>: <span class="str">"orders.created"</span>,
+  <span class="str">"content_type"</span>: <span class="str">"application/json"</span>,
+  <span class="str">"body"</span>: {
+    <span class="str">"order_id"</span>: <span class="str">"ORD-12345"</span>,
+    <span class="str">"customer_id"</span>: <span class="str">"CUST-001"</span>,
+    <span class="str">"items"</span>: [
+      { <span class="str">"sku"</span>: <span class="str">"LAPTOP-X1"</span>, <span class="str">"qty"</span>: <span class="num">1</span>, <span class="str">"price"</span>: <span class="num">25000000</span> }
+    ],
+    <span class="str">"total"</span>: <span class="num">25000000</span>,
+    <span class="str">"currency"</span>: <span class="str">"VND"</span>
+  }
+}</code></pre>
+
+  <h2>1.4 Các đặc điểm của Message Queue</h2>
+  <table>
+    <tr><th>Đặc điểm</th><th>Mô tả</th><th>Lợi ích</th></tr>
+    <tr><td><strong>Decoupling</strong></td><td>Producer và Consumer độc lập nhau</td><td>Dễ thay thế, nâng cấp từng phần</td></tr>
+    <tr><td><strong>Persistence</strong></td><td>Message lưu trên đĩa, không mất khi crash</td><td>Độ tin cậy cao</td></tr>
+    <tr><td><strong>Asynchronous</strong></td><td>Gửi xong không cần chờ xử lý</td><td>Phản hồi nhanh, UX tốt hơn</td></tr>
+    <tr><td><strong>Load Leveling</strong></td><td>Hấp thụ đột biến traffic</td><td>System ổn định khi peak load</td></tr>
+    <tr><td><strong>Retry</strong></td><td>Tự động thử lại khi xử lý lỗi</td><td>Tăng độ tin cậy xử lý</td></tr>
+    <tr><td><strong>Scalability</strong></td><td>Thêm consumer để tăng throughput</td><td>Scale ngang dễ dàng</td></tr>
+  </table>
+
+  <div class="callout callout-tip">
+    <div class="callout-label">💡 Câu hỏi thảo luận (5 phút)</div>
+    Liệt kê 3 tình huống thực tế trong các ứng dụng bạn từng dùng (Grab, Shopee, Zalo...) mà có thể đang sử dụng Message Queue ở phía backend. Giải thích tại sao?
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-ghost" onclick="goto(0)">← Trở về</button>
+    <span style="font-size:13px;color:var(--text3)">Trang 2 / 7</span>
+    <button class="btn btn-primary" onclick="goto(2)">Giờ 2: Message Broker →</button>
+  </div>
+</div>
+
+<!-- ── Section 2: Giờ 2 – Broker ── -->
+<div class="section" id="s2">
+  <div class="hour-header">
+    <span class="hour-badge">GIỜ 2 / 60 PHÚT</span>
+    <div class="hour-info">
+      <h2>Message Broker</h2>
+      <p>Vai trò trung gian · Exchange · Routing · Phân phối message</p>
+    </div>
+  </div>
+
+  <h2>2.1 Message Broker là gì?</h2>
+  <p>Message Broker là <strong>thành phần trung gian</strong> nhận message từ Producer, lưu trữ và chuyển tiếp tới Consumer phù hợp. Broker giống như một <em>bưu điện thông minh</em>:</p>
+  <ul>
+    <li>Nhận thư (message) từ người gửi (producer)</li>
+    <li>Phân loại, đóng gói, lưu trữ</li>
+    <li>Phân phối đúng địa chỉ (queue/consumer)</li>
+    <li>Xác nhận đã giao (acknowledgement)</li>
+  </ul>
+
+  <div class="diagram-flow" style="flex-direction:column;align-items:stretch">
+    <div style="display:flex;align-items:center;gap:12px;justify-content:center">
+      <div class="dbox dbox-blue">Producer A</div>
+      <div class="dbox dbox-blue">Producer B</div>
+      <div class="dbox dbox-blue">Producer C</div>
+    </div>
+    <div style="text-align:center;margin:8px 0;color:var(--text3);font-size:20px">↓ ↓ ↓</div>
+    <div style="background:rgba(108,142,247,.1);border:1px solid rgba(108,142,247,.3);border-radius:12px;padding:16px;text-align:center">
+      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:10px">📬 MESSAGE BROKER</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <div class="dbox dbox-yellow" style="font-size:11px">Exchange / Router</div>
+        <div class="dbox dbox-teal" style="font-size:11px">Queue A</div>
+        <div class="dbox dbox-teal" style="font-size:11px">Queue B</div>
+        <div class="dbox dbox-teal" style="font-size:11px">Queue C</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin:8px 0;color:var(--text3);font-size:20px">↓ ↓ ↓</div>
+    <div style="display:flex;align-items:center;gap:12px;justify-content:center">
+      <div class="dbox dbox-green">Consumer 1</div>
+      <div class="dbox dbox-green">Consumer 2</div>
+      <div class="dbox dbox-green">Consumer 3</div>
+    </div>
+  </div>
+
+  <h2>2.2 Exchange – Trái tim của RabbitMQ</h2>
+  <p>Trong RabbitMQ, <strong>Exchange</strong> là thành phần nhận message từ Producer và quyết định gửi tới Queue nào dựa trên <em>routing key</em> và <em>binding</em>.</p>
+
+  <div class="grid-2">
+    <div class="card accent-blue">
+      <div class="card-title">Direct Exchange</div>
+      <p>Chuyển message tới queue có <strong>binding key khớp chính xác</strong> với routing key.</p>
+      <p><strong>Ví dụ:</strong> routing_key = <code>"error"</code> → chỉ đến queue <code>error_log</code></p>
+      <pre><code><span class="cmt"># Routing key "info" → queue_info</span>
+<span class="cmt"># Routing key "error" → queue_error</span>
+channel.exchange_declare(
+  exchange=<span class="str">'logs_direct'</span>,
+  exchange_type=<span class="str">'direct'</span>
+)</code></pre>
+    </div>
+    <div class="card accent-teal">
+      <div class="card-title">Fanout Exchange</div>
+      <p>Gửi message tới <strong>tất cả queue</strong> đã bind, bỏ qua routing key.</p>
+      <p><strong>Ví dụ:</strong> Broadcast thông báo hệ thống tới mọi service</p>
+      <pre><code><span class="cmt"># Gửi tới TẤT CẢ queue đã bind</span>
+channel.exchange_declare(
+  exchange=<span class="str">'notifications'</span>,
+  exchange_type=<span class="str">'fanout'</span>
+)</code></pre>
+    </div>
+    <div class="card accent-yellow">
+      <div class="card-title">Topic Exchange</div>
+      <p>Routing theo <strong>pattern với wildcard</strong>: <code>*</code> (1 từ) và <code>#</code> (nhiều từ).</p>
+      <p><code>orders.*</code> khớp với <code>orders.created</code>, <code>orders.shipped</code></p>
+      <pre><code><span class="cmt"># "*.critical" → queue_critical</span>
+<span class="cmt"># "orders.#" → queue_orders</span>
+channel.exchange_declare(
+  exchange=<span class="str">'app_events'</span>,
+  exchange_type=<span class="str">'topic'</span>
+)</code></pre>
+    </div>
+    <div class="card accent-purple">
+      <div class="card-title">Headers Exchange</div>
+      <p>Routing dựa trên <strong>attributes trong header</strong> message, không dùng routing key.</p>
+      <p><strong>Ví dụ:</strong> <code>format=pdf AND type=report</code> → queue_pdf_reports</p>
+      <pre><code><span class="cmt"># Match theo header attributes</span>
+channel.exchange_declare(
+  exchange=<span class="str">'data_export'</span>,
+  exchange_type=<span class="str">'headers'</span>
+)</code></pre>
+    </div>
+  </div>
+
+  <h2>2.3 Ví dụ thực tế: Hệ thống Log</h2>
+  <p>Một hệ thống logging dùng <strong>Direct Exchange</strong> để phân loại log theo mức độ:</p>
+  <pre><code><span class="cmt">## Ví dụ 2.1 – Direct Exchange (producer_log.py)</span>
+<span class="kw">import</span> pika, json
+
+connection = pika.BlockingConnection(
+    pika.ConnectionParameters(<span class="str">'localhost'</span>)
+)
+channel = connection.channel()
+
+<span class="cmt"># Khai báo Direct Exchange</span>
+channel.exchange_declare(
+    exchange=<span class="str">'logs_direct'</span>,
+    exchange_type=<span class="str">'direct'</span>,
+    durable=<span class="kw">True</span>
+)
+
+<span class="kw">def</span> <span class="fn">send_log</span>(level: str, message: str):
+    body = json.dumps({
+        <span class="str">'level'</span>: level,
+        <span class="str">'message'</span>: message,
+        <span class="str">'service'</span>: <span class="str">'order-service'</span>
+    })
+    channel.basic_publish(
+        exchange=<span class="str">'logs_direct'</span>,
+        routing_key=level,       <span class="cmt"># 'info', 'warning', 'error'</span>
+        body=body,
+        properties=pika.BasicProperties(
+            delivery_mode=<span class="num">2</span>,    <span class="cmt"># persistent message</span>
+            content_type=<span class="str">'application/json'</span>
+        )
+    )
+    <span class="fn">print</span>(<span class="str">f"Sent [{level.upper()}]: {message}"</span>)
+
+<span class="cmt"># Gửi các loại log</span>
+send_log(<span class="str">'info'</span>,    <span class="str">'User logged in: user_001'</span>)
+send_log(<span class="str">'warning'</span>, <span class="str">'Inventory low: LAPTOP-X1 (5 left)'</span>)
+send_log(<span class="str">'error'</span>,   <span class="str">'Payment failed: order_12345'</span>)
+
+connection.close()</code></pre>
+
+  <div class="callout callout-info">
+    <div class="callout-label">📘 Lưu ý quan trọng</div>
+    <code>delivery_mode=2</code> làm cho message được lưu xuống đĩa (persistent). Nếu RabbitMQ crash và restart, message vẫn còn. Mặc định là <code>delivery_mode=1</code> (transient – mất khi restart).
+  </div>
+
+  <h2>2.4 Dead Letter Queue (DLQ)</h2>
+  <p>Khi message không thể xử lý được (lỗi, hết hạn, bị reject...), chúng được chuyển tới <strong>Dead Letter Queue</strong>:</p>
+  <pre><code><span class="cmt">## Ví dụ 2.2 – Cấu hình Dead Letter Queue</span>
+<span class="cmt"># Khai báo DLX (Dead Letter Exchange)</span>
+channel.exchange_declare(
+    exchange=<span class="str">'dlx'</span>, exchange_type=<span class="str">'direct'</span>
+)
+channel.queue_declare(queue=<span class="str">'dead_letters'</span>, durable=<span class="kw">True</span>)
+channel.queue_bind(queue=<span class="str">'dead_letters'</span>, exchange=<span class="str">'dlx'</span>)
+
+<span class="cmt"># Queue chính với cấu hình DLX</span>
+channel.queue_declare(
+    queue=<span class="str">'orders'</span>,
+    durable=<span class="kw">True</span>,
+    arguments={
+        <span class="str">'x-dead-letter-exchange'</span>: <span class="str">'dlx'</span>,
+        <span class="str">'x-message-ttl'</span>: <span class="num">60000</span>,  <span class="cmt"># 60 giây TTL</span>
+        <span class="str">'x-max-retries'</span>: <span class="num">3</span>
+    }
+)</code></pre>
+
+  <div class="callout callout-tip">
+    <div class="callout-label">💡 Thảo luận (5 phút)</div>
+    Nếu một message bị xử lý lỗi 3 lần liên tiếp, hệ thống nên làm gì? Liệt kê các chiến lược xử lý Dead Letter Messages trong thực tế.
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-ghost" onclick="goto(1)">← Giờ 1</button>
+    <span style="font-size:13px;color:var(--text3)">Trang 3 / 7</span>
+    <button class="btn btn-primary" onclick="goto(3)">Giờ 3: PubSub & P2P →</button>
+  </div>
+</div>
+
+<!-- ── Section 3: Giờ 3 ── -->
+<div class="section" id="s3">
+  <div class="hour-header">
+    <span class="hour-badge">GIỜ 3 / 60 PHÚT</span>
+    <div class="hour-info">
+      <h2>Pub/Sub & Point-to-Point</h2>
+      <p>Hai mô hình giao tiếp – So sánh – Use cases</p>
+    </div>
+  </div>
+
+  <h2>3.1 Point-to-Point (P2P)</h2>
+  <p>Trong mô hình <strong>Point-to-Point</strong>, mỗi message được xử lý bởi <em>đúng một</em> consumer. Queue đóng vai trò trung gian lưu trữ.</p>
+
+  <div class="diagram-flow">
+    <div class="dbox dbox-blue">Producer</div>
+    <span class="arrow">→</span>
+    <div class="dbox dbox-teal">📦 Queue</div>
+    <span class="arrow">→</span>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="dbox dbox-green">Consumer 1 ✓</div>
+      <div class="dbox dbox-gray">Consumer 2 (chờ)</div>
+      <div class="dbox dbox-gray">Consumer 3 (chờ)</div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--accent3)">Mỗi message chỉ được nhận bởi <strong>một</strong> consumer (round-robin hoặc theo tải)</p>
+
+  <div class="card accent-green">
+    <div class="card-title">Use cases của Point-to-Point</div>
+    <div class="grid-2">
+      <ul>
+        <li>Xử lý đơn hàng (mỗi đơn chỉ xử lý 1 lần)</li>
+        <li>Gửi email (mỗi email gửi 1 lần)</li>
+        <li>Task queue (resize ảnh, export PDF)</li>
+      </ul>
+      <ul>
+        <li>Thanh toán (tránh double charge)</li>
+        <li>Phân phối công việc cho worker pool</li>
+        <li>Hàng đợi in ấn</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>3.2 Publish/Subscribe (Pub/Sub)</h2>
+  <p>Trong mô hình <strong>Pub/Sub</strong>, message được gửi tới một <em>Topic</em>, và <strong>tất cả subscriber</strong> đã đăng ký nhận một bản sao.</p>
+
+  <div class="diagram-flow">
+    <div class="dbox dbox-blue">Publisher</div>
+    <span class="arrow">→</span>
+    <div class="dbox dbox-yellow">📡 Topic</div>
+    <span class="arrow">→</span>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div class="dbox dbox-green">Email Service ✓</div>
+      <div class="dbox dbox-green">Inventory Service ✓</div>
+      <div class="dbox dbox-green">Analytics Service ✓</div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--green)">Mỗi subscriber nhận <strong>bản sao riêng</strong> của message</p>
+
+  <div class="card accent-yellow">
+    <div class="card-title">Use cases của Pub/Sub</div>
+    <div class="grid-2">
+      <ul>
+        <li>Thông báo đặt hàng thành công (nhiều service cùng cần biết)</li>
+        <li>Cập nhật giá sản phẩm (nhiều frontend cần refresh)</li>
+        <li>Sự kiện hệ thống (audit log, metrics, alert)</li>
+      </ul>
+      <ul>
+        <li>Live chat / real-time notifications</li>
+        <li>Feed của mạng xã hội</li>
+        <li>Broadcast trạng thái game online</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>3.3 So sánh chi tiết P2P vs Pub/Sub</h2>
+  <table>
+    <tr><th>Tiêu chí</th><th>Point-to-Point</th><th>Publish/Subscribe</th></tr>
+    <tr><td>Số consumer nhận message</td><td>Đúng 1 consumer</td><td>Tất cả subscriber</td></tr>
+    <tr><td>Cơ chế lưu trữ</td><td>Queue</td><td>Topic</td></tr>
+    <tr><td>Message sau khi đọc</td><td>Xóa khỏi queue</td><td>Vẫn còn, subscriber khác vẫn đọc được</td></tr>
+    <tr><td>Thứ tự xử lý</td><td>FIFO đảm bảo</td><td>Phụ thuộc implementation</td></tr>
+    <tr><td>Khi consumer offline</td><td>Message chờ trong queue</td><td>Phụ thuộc: durable subscription hay không</td></tr>
+    <tr><td>Use case chính</td><td>Task distribution, work queue</td><td>Event broadcasting, reactive systems</td></tr>
+    <tr><td>Ví dụ công cụ</td><td>RabbitMQ (default), SQS</td><td>Kafka, RabbitMQ fanout, SNS</td></tr>
+  </table>
+
+  <h2>3.4 Ví dụ code: Pub/Sub với RabbitMQ Fanout</h2>
+  <pre><code><span class="cmt">## Ví dụ 3.1 – Publisher (khi đơn hàng được tạo)</span>
+<span class="kw">import</span> pika, json
+
+<span class="kw">def</span> <span class="fn">publish_order_created</span>(order_data: dict):
+    connection = pika.BlockingConnection(pika.ConnectionParameters(<span class="str">'localhost'</span>))
+    channel = connection.channel()
+
+    <span class="cmt"># Fanout exchange – gửi tới TẤT CẢ queue đã bind</span>
+    channel.exchange_declare(
+        exchange=<span class="str">'order_events'</span>,
+        exchange_type=<span class="str">'fanout'</span>,
+        durable=<span class="kw">True</span>
+    )
+
+    message = json.dumps({
+        <span class="str">'event'</span>: <span class="str">'order.created'</span>,
+        <span class="str">'data'</span>: order_data
+    })
+
+    channel.basic_publish(
+        exchange=<span class="str">'order_events'</span>,
+        routing_key=<span class="str">''</span>,  <span class="cmt"># Fanout bỏ qua routing_key</span>
+        body=message
+    )
+    <span class="fn">print</span>(<span class="str">f"Published order event: {order_data['order_id']}"</span>)
+    connection.close()
+
+<span class="cmt"># Test</span>
+publish_order_created({<span class="str">'order_id'</span>: <span class="str">'ORD-999'</span>, <span class="str">'total'</span>: <span class="num">500000</span>})</code></pre>
+
+  <pre><code><span class="cmt">## Ví dụ 3.2 – Subscriber 1: Email Service</span>
+<span class="kw">import</span> pika, json
+
+connection = pika.BlockingConnection(pika.ConnectionParameters(<span class="str">'localhost'</span>))
+channel = connection.channel()
+
+channel.exchange_declare(exchange=<span class="str">'order_events'</span>, exchange_type=<span class="str">'fanout'</span>, durable=<span class="kw">True</span>)
+
+<span class="cmt"># Queue riêng cho Email Service (exclusive=True → tự xóa khi disconnect)</span>
+result = channel.queue_declare(queue=<span class="str">'email_service_queue'</span>, durable=<span class="kw">True</span>)
+channel.queue_bind(exchange=<span class="str">'order_events'</span>, queue=<span class="str">'email_service_queue'</span>)
+
+<span class="kw">def</span> <span class="fn">on_order_event</span>(ch, method, properties, body):
+    event = json.loads(body)
+    order = event[<span class="str">'data'</span>]
+    <span class="fn">print</span>(<span class="str">f"📧 Email Service: Sending confirmation for order {order['order_id']}"</span>)
+    <span class="cmt"># Gửi email thực tế ở đây...</span>
+    ch.basic_ack(delivery_tag=method.delivery_tag)  <span class="cmt"># Xác nhận đã xử lý</span>
+
+channel.basic_consume(queue=<span class="str">'email_service_queue'</span>, on_message_callback=on_order_event)
+<span class="fn">print</span>(<span class="str">'Email Service listening...'</span>)
+channel.start_consuming()</code></pre>
+
+  <div class="callout callout-info">
+    <div class="callout-label">📘 Chạy song song</div>
+    Mở <strong>3 terminal riêng</strong>: 1 cho publisher, 1 cho email subscriber, 1 cho inventory subscriber. Khi publisher gửi 1 message, cả 2 subscriber đều nhận được – đó chính là Pub/Sub!
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-ghost" onclick="goto(2)">← Giờ 2</button>
+    <span style="font-size:13px;color:var(--text3)">Trang 4 / 7</span>
+    <button class="btn btn-primary" onclick="goto(4)">Giờ 4: Lab RabbitMQ →</button>
+  </div>
+</div>
+
+<!-- ── Section 4: Lab RabbitMQ ── -->
+<div class="section" id="s4">
+  <div class="hour-header">
+    <span class="hour-badge">GIỜ 4 / 60 PHÚT</span>
+    <div class="hour-info">
+      <h2>Lab thực hành: RabbitMQ</h2>
+      <p>Cài đặt · Hello World · Work Queue · Topic Exchange</p>
+    </div>
+  </div>
+
+  <div class="lab-box">
+    <h3>🎯 Mục tiêu Lab</h3>
+    <p>Sau lab này, sinh viên thực hành được 4 pattern cơ bản với RabbitMQ: Hello World, Work Queues, Pub/Sub (Fanout), và Topic Exchange.</p>
+  </div>
+
+  <h2>Bước 1: Cài đặt RabbitMQ bằng Docker</h2>
+  <div class="steps">
+    <div class="step"><div class="step-num"></div><div class="step-content">
+      <h4>Khởi động RabbitMQ</h4>
+      <pre><code><span class="cmt"># Chạy RabbitMQ với Management UI</span>
+docker run -d --name rabbitmq \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=admin \
+  -e RABBITMQ_DEFAULT_PASS=admin123 \
+  rabbitmq:3-management
+
+<span class="cmt"># Kiểm tra container đang chạy</span>
+docker ps</code></pre>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-content">
+      <h4>Truy cập Management UI</h4>
+      <p>Mở trình duyệt tại <strong>http://localhost:15672</strong></p>
+      <p>Đăng nhập: <code>admin</code> / <code>admin123</code></p>
+      <p>Quan sát: Connections, Channels, Exchanges, Queues</p>
+    </div></div>
+    <div class="step"><div class="step-num"></div><div class="step-content">
+      <h4>Cài thư viện Python</h4>
+      <pre><code>pip install pika</code></pre>
+    </div></div>
+  </div>
+
+  <h2>Bước 2: Pattern 1 – Hello World (P2P cơ bản)</h2>
+  <pre><code><span class="cmt">## lab4_producer.py – Gửi message đơn giản</span>
+<span class="kw">import</span> pika
+
+connection = pika.BlockingConnection(
+    pika.ConnectionParameters(
+        host=<span class="str">'localhost'</span>,
+        credentials=pika.PlainCredentials(<span class="str">'admin'</span>, <span class="str">'admin123'</span>)
+    )
+)
+channel = connection.channel()
+
+<span class="cmt"># Tạo queue (idempotent – gọi nhiều lần không bị lỗi)</span>
+channel.queue_declare(queue=<span class="str">'hello'</span>, durable=<span class="kw">True</span>)
+
+channel.basic_publish(
+    exchange=<span class="str">''</span>,               <span class="cmt"># Default exchange</span>
+    routing_key=<span class="str">'hello'</span>,       <span class="cmt"># Tên queue = routing key</span>
+    body=<span class="str">'Xin chào RabbitMQ!'</span>,
+    properties=pika.BasicProperties(delivery_mode=<span class="num">2</span>)
+)
+<span class="fn">print</span>(<span class="str">" [x] Sent 'Xin chào RabbitMQ!'"</span>)
+connection.close()</code></pre>
+
+  <pre><code><span class="cmt">## lab4_consumer.py – Nhận và xử lý message</span>
+<span class="kw">import</span> pika, time
+
+connection = pika.BlockingConnection(
+    pika.ConnectionParameters(
+        host=<span class="str">'localhost'</span>,
+        credentials=pika.PlainCredentials(<span class="str">'admin'</span>, <span class="str">'admin123'</span>)
+    )
+)
+channel = connection.channel()
+channel.queue_declare(queue=<span class="str">'hello'</span>, durable=<span class="kw">True</span>)
+
+<span class="cmt"># Prefetch count = 1: consumer chỉ nhận 1 message tại một thời điểm</span>
+channel.basic_qos(prefetch_count=<span class="num">1</span>)
+
+<span class="kw">def</span> <span class="fn">callback</span>(ch, method, properties, body):
+    <span class="fn">print</span>(<span class="str">f" [x] Received: {body.decode()}"</span>)
+    time.sleep(<span class="num">1</span>)           <span class="cmt"># Giả lập xử lý</span>
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+    <span class="fn">print</span>(<span class="str">" [x] Done processing"</span>)
+
+channel.basic_consume(queue=<span class="str">'hello'</span>, on_message_callback=callback)
+<span class="fn">print</span>(<span class="str">' [*] Waiting for messages. CTRL+C to exit'</span>)
+channel.start_consuming()</code></pre>
+
+  <div class="callout callout-tip">
+    <div class="callout-label">✅ Thực hành</div>
+    Mở 2 terminal. Terminal 1 chạy <code>consumer.py</code>, Terminal 2 chạy <code>producer.py</code>. Quan sát message xuất hiện ở consumer. Thử chạy 2 consumer và 1 producer gửi 10 messages – nhận xét sự phân phối.
+  </div>
+
+  <h2>Bước 3: Pattern 2 – Work Queue (nhiều worker)</h2>
+  <pre><code><span class="cmt">## lab4_work_producer.py – Gửi nhiều task</span>
+<span class="kw">import</span> pika, sys
+
+connection = pika.BlockingConnection(pika.ConnectionParameters(<span class="str">'localhost'</span>))
+channel = connection.channel()
+channel.queue_declare(queue=<span class="str">'task_queue'</span>, durable=<span class="kw">True</span>)
+
+messages = [
+    <span class="str">"Task 1: Resize image product_001.jpg"</span>,
+    <span class="str">"Task 2: Generate PDF invoice_2025.pdf"</span>,
+    <span class="str">"Task 3: Send email to 1000 users"</span>,
+    <span class="str">"Task 4: Update search index"</span>,
+    <span class="str">"Task 5: Compress video tutorial.mp4"</span>,
+]
+
+<span class="kw">for</span> msg <span class="kw">in</span> messages:
+    channel.basic_publish(
+        exchange=<span class="str">''</span>,
+        routing_key=<span class="str">'task_queue'</span>,
+        body=msg,
+        properties=pika.BasicProperties(delivery_mode=<span class="num">2</span>)
+    )
+    <span class="fn">print</span>(<span class="str">f" [x] Sent: {msg}"</span>)
+
+connection.close()</code></pre>
+
+  <pre><code><span class="cmt">## lab4_worker.py – Worker xử lý task (chạy nhiều instance)</span>
+<span class="kw">import</span> pika, time, sys
+
+worker_id = sys.argv[<span class="num">1</span>] <span class="kw">if</span> len(sys.argv) > <span class="num">1</span> <span class="kw">else</span> <span class="str">"W1"</span>
+
+connection = pika.BlockingConnection(pika.ConnectionParameters(<span class="str">'localhost'</span>))
+channel = connection.channel()
+channel.queue_declare(queue=<span class="str">'task_queue'</span>, durable=<span class="kw">True</span>)
+channel.basic_qos(prefetch_count=<span class="num">1</span>)  <span class="cmt"># Fair dispatch</span>
+
+<span class="kw">def</span> <span class="fn">process_task</span>(ch, method, properties, body):
+    task = body.decode()
+    <span class="fn">print</span>(<span class="str">f"[{worker_id}] Processing: {task}"</span>)
+    time.sleep(len(task) / <span class="num">20</span>)    <span class="cmt"># Giả lập thời gian xử lý</span>
+    <span class="fn">print</span>(<span class="str">f"[{worker_id}] Done: {task[:30]}..."</span>)
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
+channel.basic_consume(queue=<span class="str">'task_queue'</span>, on_message_callback=process_task)
+<span class="fn">print</span>(<span class="str">f'[{worker_id}] Ready. CTRL+C to exit'</span>)
+channel.start_consuming()</code></pre>
+
+  <div class="callout callout-info">
+    <div class="callout-label">📘 Chạy thực nghiệm</div>
+    <strong>Terminal 1:</strong> <code>python lab4_worker.py W1</code><br>
+    <strong>Terminal 2:</strong> <code>python lab4_worker.py W2</code><br>
+    <strong>Terminal 3:</strong> <code>python lab4_work_producer.py</code><br>
+    Quan sát 5 task được phân phối đều giữa 2 worker!
+  </div>
+
+  <h2>Bước 4: Pattern 3 – Topic Exchange (nâng cao)</h2>
+  <pre><code><span class="cmt">## lab4_topic_producer.py – Gửi event theo topic</span>
+<span class="kw">import</span> pika, json, datetime
+
+connection = pika.BlockingConnection(pika.ConnectionParameters(<span class="str">'localhost'</span>))
+channel = connection.channel()
+channel.exchange_declare(exchange=<span class="str">'events'</span>, exchange_type=<span class="str">'topic'</span>, durable=<span class="kw">True</span>)
+
+events = [
+    (<span class="str">'orders.created.vn'</span>,   {<span class="str">'order_id'</span>: <span class="str">'ORD-1'</span>, <span class="str">'country'</span>: <span class="str">'VN'</span>}),
+    (<span class="str">'orders.shipped.vn'</span>,   {<span class="str">'order_id'</span>: <span class="str">'ORD-2'</span>, <span class="str">'country'</span>: <span class="str">'VN'</span>}),
+    (<span class="str">'orders.created.sg'</span>,   {<span class="str">'order_id'</span>: <span class="str">'ORD-3'</span>, <span class="str">'country'</span>: <span class="str">'SG'</span>}),
+    (<span class="str">'payments.success.vn'</span>,  {<span class="str">'payment_id'</span>: <span class="str">'PAY-1'</span>, <span class="str">'amount'</span>: <span class="num">500000</span>}),
+    (<span class="str">'payments.failed.vn'</span>,   {<span class="str">'payment_id'</span>: <span class="str">'PAY-2'</span>, <span class="str">'reason'</span>: <span class="str">'insufficient funds'</span>}),
+]
+
+<span class="kw">for</span> routing_key, data <span class="kw">in</span> events:
+    channel.basic_publish(
+        exchange=<span class="str">'events'</span>,
+        routing_key=routing_key,
+        body=json.dumps(data)
+    )
+    <span class="fn">print</span>(<span class="str">f"Published [{routing_key}]: {data}"</span>)
+
+connection.close()</code></pre>
+
+  <pre><code><span class="cmt">## lab4_topic_consumer.py – Subscribe theo pattern</span>
+<span class="kw">import</span> pika, json, sys
+
+<span class="cmt"># Nhận pattern từ argument: "orders.#", "*.created.*", "#"</span>
+binding_key = sys.argv[<span class="num">1</span>] <span class="kw">if</span> len(sys.argv) > <span class="num">1</span> <span class="kw">else</span> <span class="str">"#"</span>
+
+connection = pika.BlockingConnection(pika.ConnectionParameters(<span class="str">'localhost'</span>))
+channel = connection.channel()
+channel.exchange_declare(exchange=<span class="str">'events'</span>, exchange_type=<span class="str">'topic'</span>, durable=<span class="kw">True</span>)
+
+result = channel.queue_declare(queue=<span class="str">''</span>, exclusive=<span class="kw">True</span>)
+queue_name = result.method.queue
+channel.queue_bind(exchange=<span class="str">'events'</span>, queue=queue_name, routing_key=binding_key)
+
+<span class="fn">print</span>(<span class="str">f"[*] Subscribed to pattern: '{binding_key}'"</span>)
+
+<span class="kw">def</span> <span class="fn">on_event</span>(ch, method, properties, body):
+    data = json.loads(body)
+    <span class="fn">print</span>(<span class="str">f"  → [{method.routing_key}] {data}"</span>)
+
+channel.basic_consume(queue=queue_name, on_message_callback=on_event, auto_ack=<span class="kw">True</span>)
+channel.start_consuming()</code></pre>
+
+  <div class="callout callout-tip">
+    <div class="callout-label">🧪 Thực nghiệm Topic Exchange</div>
+    <strong>Consumer 1:</strong> <code>python topic_consumer.py "orders.#"</code> – nhận tất cả order events<br>
+    <strong>Consumer 2:</strong> <code>python topic_consumer.py "*.created.*"</code> – nhận tất cả created events<br>
+    <strong>Consumer 3:</strong> <code>python topic_consumer.py "payments.failed.*"</code> – chỉ nhận payment failed<br>
+    Sau đó chạy producer và quan sát ai nhận message gì!
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-ghost" onclick="goto(3)">← Giờ 3</button>
+    <span style="font-size:13px;color:var(--text3)">Trang 5 / 7</span>
+    <button class="btn btn-primary" onclick="goto(5)">Giờ 5: Lab Kafka →</button>
+  </div>
+</div>
+
+<!-- ── Section 5: Lab Kafka ── -->
+<div class="section" id="s5">
+  <div class="hour-header">
+    <span class="hour-badge">GIỜ 5 / 60 PHÚT</span>
+    <div class="hour-info">
+      <h2>Lab thực hành: Apache Kafka</h2>
+      <p>Topics · Partitions · Consumer Groups · Streaming</p>
+    </div>
+  </div>
+
+  <div class="lab-box">
+    <h3>🎯 Mục tiêu Lab</h3>
+    <p>Cài đặt Kafka, hiểu khái niệm Topic/Partition/Offset, và viết Producer/Consumer với Python. So sánh trực tiếp với RabbitMQ.</p>
+  </div>
+
+  <h2>Bước 1: Kafka khác RabbitMQ như thế nào?</h2>
+  <table>
+    <tr><th>Tiêu chí</th><th>RabbitMQ</th><th>Apache Kafka</th></tr>
+    <tr><td>Mô hình</td><td>Message Broker (push)</td><td>Distributed Log (pull)</td></tr>
+    <tr><td>Lưu trữ message</td><td>Xóa sau khi consumer ACK</td><td>Giữ lại theo retention policy (mặc định 7 ngày)</td></tr>
+    <tr><td>Thứ tự message</td><td>Per-queue FIFO</td><td>Per-partition ordering</td></tr>
+    <tr><td>Replay message</td><td>Không thể</td><td>Được – seek về offset bất kỳ</td></tr>
+    <tr><td>Throughput</td><td>Vừa (~50k msg/s)</td><td>Rất cao (~1M msg/s)</td></tr>
+    <tr><td>Use case chính</td><td>Task queue, RPC, routing phức tạp</td><td>Event streaming, log aggregation, analytics</td></tr>
+  </table>
+
+  <h2>Bước 2: Các khái niệm Kafka</h2>
+  <div class="grid-3">
+    <div class="card accent-blue">
+      <div class="card-title">Topic</div>
+      <p>Kênh phân loại message. Tương tự folder trong filesystem. Ví dụ: <code>user-events</code>, <code>order-created</code></p>
+    </div>
+    <div class="card accent-teal">
+      <div class="card-title">Partition</div>
+      <p>Mỗi Topic chia thành nhiều Partition để scale ngang. Message trong 1 partition có thứ tự. Nhiều partition = nhiều consumer đọc song song.</p>
+    </div>
+    <div class="card accent-yellow">
+      <div class="card-title">Offset</div>
+      <p>Vị trí của message trong Partition. Consumer lưu offset để biết đọc tới đâu. Có thể seek về offset cũ để đọc lại.</p>
+    </div>
+    <div class="card accent-green">
+      <div class="card-title">Consumer Group</div>
+      <p>Nhiều consumer cùng group → chia nhau partition (scale out). Khác group → mỗi group nhận đủ tất cả message (Pub/Sub).</p>
+    </div>
+    <div class="card accent-purple">
+      <div class="card-title">Broker</div>
+      <p>Một Kafka server. Cluster gồm nhiều broker. Mỗi partition có 1 leader broker và N replica brokers.</p>
+    </div>
+    <div class="card accent-red">
+      <div class="card-title">Retention</div>
+      <p>Kafka giữ message trong thời gian cấu hình (mặc định 7 ngày). Cho phép replay event khi cần debug hoặc migrate service mới.</p>
+    </div>
+  </div>
+
+  <h2>Bước 3: Cài Kafka bằng Docker</h2>
+  <pre><code><span class="cmt"># docker-compose.yml – Kafka + Zookeeper</span>
+<span class="kw">version</span>: <span class="str">'3.8'</span>
+<span class="kw">services</span>:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: <span class="num">2181</span>
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    ports:
+      - <span class="str">"9092:9092"</span>
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: <span class="str">'true'</span>
+      KAFKA_NUM_PARTITIONS: <span class="num">3</span>
+    depends_on:
+      - zookeeper</code></pre>
+
+  <pre><code><span class="cmt"># Khởi động</span>
+docker-compose up -d
+
+<span class="cmt"># Tạo topic thủ công (tuỳ chọn)</span>
+docker exec kafka kafka-topics --create \
+  --topic order-events \
+  --bootstrap-server localhost:9092 \
+  --partitions 3 \
+  --replication-factor 1
+
+<span class="cmt"># Xem danh sách topics</span>
+docker exec kafka kafka-topics --list --bootstrap-server localhost:9092</code></pre>
+
+  <pre><code><span class="cmt"># Cài thư viện Python</span>
+pip install kafka-python</code></pre>
+
+  <h2>Bước 4: Kafka Producer</h2>
+  <pre><code><span class="cmt">## lab5_producer.py – Gửi events lên Kafka</span>
+<span class="kw">from</span> kafka <span class="kw">import</span> KafkaProducer
+<span class="kw">import</span> json, time, random
+
+producer = KafkaProducer(
+    bootstrap_servers=[<span class="str">'localhost:9092'</span>],
+    value_serializer=<span class="kw">lambda</span> v: json.dumps(v).encode(<span class="str">'utf-8'</span>),
+    key_serializer=<span class="kw">lambda</span> k: k.encode(<span class="str">'utf-8'</span>) <span class="kw">if</span> k <span class="kw">else</span> <span class="kw">None</span>
+)
+
+<span class="kw">def</span> <span class="fn">simulate_orders</span>(count: int = <span class="num">20</span>):
+    users = [<span class="str">'user_001'</span>, <span class="str">'user_002'</span>, <span class="str">'user_003'</span>]
+    
+    <span class="kw">for</span> i <span class="kw">in</span> range(count):
+        order = {
+            <span class="str">'order_id'</span>: <span class="str">f'ORD-{1000 + i}'</span>,
+            <span class="str">'user_id'</span>: random.choice(users),
+            <span class="str">'amount'</span>: random.randint(<span class="num">50000</span>, <span class="num">5000000</span>),
+            <span class="str">'timestamp'</span>: time.time()
+        }
+        
+        <span class="cmt"># Key = user_id → đảm bảo cùng user vào cùng partition</span>
+        future = producer.send(
+            topic=<span class="str">'order-events'</span>,
+            key=order[<span class="str">'user_id'</span>],
+            value=order
+        )
+        
+        record = future.get(timeout=<span class="num">10</span>)
+        <span class="fn">print</span>(<span class="str">f"Sent: {order['order_id']} → Partition {record.partition}, Offset {record.offset}"</span>)
+        time.sleep(<span class="num">0.5</span>)
+
+simulate_orders(<span class="num">20</span>)
+producer.close()</code></pre>
+
+  <h2>Bước 5: Kafka Consumer</h2>
+  <pre><code><span class="cmt">## lab5_consumer.py – Đọc events từ Kafka</span>
+<span class="kw">from</span> kafka <span class="kw">import</span> KafkaConsumer
+<span class="kw">import</span> json, sys
+
+group_id = sys.argv[<span class="num">1</span>] <span class="kw">if</span> len(sys.argv) > <span class="num">1</span> <span class="kw">else</span> <span class="str">'analytics-group'</span>
+worker_id = sys.argv[<span class="num">2</span>] <span class="kw">if</span> len(sys.argv) > <span class="num">2</span> <span class="kw">else</span> <span class="str">'C1'</span>
+
+consumer = KafkaConsumer(
+    <span class="str">'order-events'</span>,
+    bootstrap_servers=[<span class="str">'localhost:9092'</span>],
+    group_id=group_id,
+    auto_offset_reset=<span class="str">'earliest'</span>,  <span class="cmt"># Đọc từ đầu nếu chưa có offset</span>
+    value_deserializer=<span class="kw">lambda</span> m: json.loads(m.decode(<span class="str">'utf-8'</span>)),
+    enable_auto_commit=<span class="kw">True</span>
+)
+
+<span class="fn">print</span>(<span class="str">f"[{worker_id}] Consumer group: {group_id} – listening..."</span>)
+
+<span class="kw">for</span> message <span class="kw">in</span> consumer:
+    order = message.value
+    <span class="fn">print</span>(<span class="str">f"[{worker_id}] P{message.partition}@{message.offset}: "</span>
+          <span class="str">f"Order {order['order_id']} from {order['user_id']} – {order['amount']:,}đ"</span>)</code></pre>
+
+  <div class="callout callout-tip">
+    <div class="callout-label">🧪 Thực nghiệm Consumer Groups</div>
+    <strong>Thực nghiệm 1 – Scale out:</strong><br>
+    Terminal 1: <code>python consumer.py order-group C1</code><br>
+    Terminal 2: <code>python consumer.py order-group C2</code><br>
+    → Kafka chia partition giữa 2 consumer trong cùng group<br><br>
+    <strong>Thực nghiệm 2 – Pub/Sub style:</strong><br>
+    Terminal 3: <code>python consumer.py email-group E1</code><br>
+    Terminal 4: <code>python consumer.py warehouse-group W1</code><br>
+    → Mỗi group đọc được TẤT CẢ message (như Pub/Sub!)
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-ghost" onclick="goto(4)">← Giờ 4</button>
+    <span style="font-size:13px;color:var(--text3)">Trang 6 / 7</span>
+    <button class="btn btn-primary" onclick="goto(6)">Giờ 6: Kiến trúc →</button>
+  </div>
+</div>
+
+<!-- ── Section 6: Kiến trúc ── -->
+<div class="section" id="s6">
+  <div class="hour-header">
+    <span class="hour-badge">GIỜ 6 / 60 PHÚT</span>
+    <div class="hour-info">
+      <h2>Kiến trúc & Best Practices</h2>
+      <p>Chọn công cụ đúng · Thiết kế hệ thống · Patterns nâng cao</p>
+    </div>
+  </div>
+
+  <h2>6.1 Khi nào dùng gì?</h2>
+  <div class="grid-2">
+    <div class="card accent-blue">
+      <div class="card-title">Chọn RabbitMQ khi...</div>
+      <ul>
+        <li>Cần routing linh hoạt (Direct/Topic/Headers Exchange)</li>
+        <li>Task queue với priority</li>
+        <li>Cần RPC (Request-Reply pattern)</li>
+        <li>Message phải được xử lý và xóa (không cần replay)</li>
+        <li>Team mới với Message Queue (UI dễ dùng)</li>
+        <li>Throughput vừa phải (&lt; 100k msg/s)</li>
+      </ul>
+    </div>
+    <div class="card accent-teal">
+      <div class="card-title">Chọn Apache Kafka khi...</div>
+      <ul>
+        <li>Cần throughput cực cao (&gt; 100k msg/s)</li>
+        <li>Event sourcing – cần lưu lịch sử đầy đủ</li>
+        <li>Stream processing với Kafka Streams/Flink</li>
+        <li>Log aggregation từ nhiều service</li>
+        <li>Cần replay events (audit, debug, migration)</li>
+        <li>Hệ thống microservices phức tạp</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout callout-info">
+    <div class="callout-label">🏢 Dùng trong thực tế</div>
+    <strong>LinkedIn</strong> tạo ra Kafka để xử lý activity feed hàng tỷ events/ngày. <strong>Netflix</strong> dùng Kafka cho real-time monitoring và event sourcing. <strong>Grab/Gojek</strong> dùng cả hai: Kafka cho event streaming, RabbitMQ cho task processing.
+  </div>
+
+  <h2>6.2 Case Study: Thiết kế E-Commerce System</h2>
+  <p>Thiết kế hệ thống xử lý đơn hàng cho sàn TMĐT 10 triệu đơn/ngày:</p>
+
+  <div class="card accent-yellow">
+    <div class="card-title">🏗️ Kiến trúc Event-Driven</div>
+    <pre><code><span class="cmt">Luồng đặt hàng:</span>
+Client → Order Service → Kafka Topic: <span class="str">"orders.created"</span>
+                              ↓ (Consumer Groups)
+           ├─ inventory-group → Inventory Service (giảm tồn kho)
+           ├─ payment-group   → Payment Service (xử lý thanh toán)
+           ├─ email-group     → Email Service (gửi xác nhận)
+           └─ analytics-group → Analytics Service (thống kê)
+
+<span class="cmt">Kết quả thanh toán → RabbitMQ (routing phức tạp)</span>
+Payment Service → Exchange: <span class="str">'payment_results'</span> (topic exchange)
+  routing_key: <span class="str">'payment.success.{bank}'</span>
+  routing_key: <span class="str">'payment.failed.{reason}'</span>
+  routing_key: <span class="str">'payment.pending.{method}'</span>
+                              ↓
+           ├─ <span class="str">'payment.success.*'</span> → Order fulfillment queue
+           ├─ <span class="str">'payment.failed.*'</span>  → Retry + notification queue
+           └─ <span class="str">'payment.*.*'</span>      → Audit log queue</code></pre>
+  </div>
+
+  <h2>6.3 Các Pattern nâng cao</h2>
+
+  <h3>Pattern 1: Saga Pattern (Distributed Transactions)</h3>
+  <p>Thay vì 2-phase commit, dùng chuỗi events để đảm bảo tính nhất quán:</p>
+  <pre><code><span class="cmt">## Choreography-based Saga</span>
+<span class="cmt"># Bước 1: Order Service</span>
+publish(<span class="str">'orders.created'</span>, order_data)
+
+<span class="cmt"># Bước 2: Inventory Service (subscribe orders.created)</span>
+<span class="kw">def</span> <span class="fn">on_order_created</span>(order):
+    <span class="kw">if</span> reserve_inventory(order):
+        publish(<span class="str">'inventory.reserved'</span>, order)
+    <span class="kw">else</span>:
+        publish(<span class="str">'inventory.failed'</span>, order)  <span class="cmt"># Trigger rollback</span>
+
+<span class="cmt"># Bước 3: Payment Service (subscribe inventory.reserved)</span>
+<span class="kw">def</span> <span class="fn">on_inventory_reserved</span>(order):
+    <span class="kw">if</span> charge_payment(order):
+        publish(<span class="str">'payment.success'</span>, order)
+    <span class="kw">else</span>:
+        publish(<span class="str">'payment.failed'</span>, order)
+        <span class="cmt"># Inventory Service cần subscribe payment.failed để hoàn lại</span></code></pre>
+
+  <h3>Pattern 2: CQRS + Event Sourcing với Kafka</h3>
+  <pre><code><span class="cmt">## Event Store: Lưu mọi thay đổi dưới dạng events</span>
+events = [
+  {<span class="str">'type'</span>: <span class="str">'OrderCreated'</span>,   <span class="str">'order_id'</span>: <span class="str">'ORD-1'</span>, <span class="str">'amount'</span>: <span class="num">500000</span>},
+  {<span class="str">'type'</span>: <span class="str">'PaymentReceived'</span>, <span class="str">'order_id'</span>: <span class="str">'ORD-1'</span>, <span class="str">'amount'</span>: <span class="num">500000</span>},
+  {<span class="str">'type'</span>: <span class="str">'OrderShipped'</span>,    <span class="str">'order_id'</span>: <span class="str">'ORD-1'</span>, <span class="str">'carrier'</span>: <span class="str">'GHN'</span>},
+]
+<span class="cmt"># Rebuild state bất kỳ thời điểm nào bằng cách replay events</span>
+<span class="cmt"># Cực kỳ hữu ích cho audit trail và debug</span></code></pre>
+
+  <h2>6.4 Best Practices tổng kết</h2>
+  <div class="grid-2">
+    <div class="card accent-green">
+      <div class="card-title">✅ Nên làm</div>
+      <ul>
+        <li>Dùng <code>durable=True</code> cho production queues</li>
+        <li>Luôn implement <code>basic_ack</code> / <code>basic_nack</code></li>
+        <li>Cấu hình Dead Letter Queue cho error handling</li>
+        <li>Dùng idempotent consumers (xử lý duplicate message)</li>
+        <li>Monitor queue depth và consumer lag</li>
+        <li>Thiết kế message schema với versioning</li>
+        <li>Test với message được gửi nhiều lần (at-least-once delivery)</li>
+      </ul>
+    </div>
+    <div class="card accent-red">
+      <div class="card-title">❌ Tránh làm</div>
+      <ul>
+        <li>Đưa business logic vào message routing</li>
+        <li>Gửi message quá lớn (&gt; 1MB)</li>
+        <li>Commit offset trước khi xử lý xong (Kafka)</li>
+        <li>Tạo quá nhiều queue nhỏ lẻ</li>
+        <li>Không có retry mechanism</li>
+        <li>Bỏ qua message ordering khi dữ liệu có dependency</li>
+        <li>Không monitor và alert queue depth</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>6.5 Bài tập về nhà</h2>
+  <div class="card accent-purple">
+    <div class="card-title">📝 Bài tập thực hành</div>
+    <div class="steps">
+      <div class="step"><div class="step-num"></div><div class="step-content">
+        <h4>Mức cơ bản</h4>
+        <p>Xây dựng hệ thống gửi thông báo: khi giáo viên đăng bài tập mới, tất cả sinh viên trong lớp nhận được notification. Dùng RabbitMQ Fanout Exchange.</p>
+      </div></div>
+      <div class="step"><div class="step-num"></div><div class="step-content">
+        <h4>Mức trung bình</h4>
+        <p>Thiết kế và cài đặt hệ thống đặt món ăn với 3 service: Order Service (producer), Kitchen Service (consumer), Delivery Service (consumer). Dùng Topic Exchange với routing: <code>order.hot.*</code> và <code>order.cold.*</code>.</p>
+      </div></div>
+      <div class="step"><div class="step-num"></div><div class="step-content">
+        <h4>Mức nâng cao</h4>
+        <p>Dùng Kafka xây dựng mini analytics system: thu thập click events từ website (Producer), tổng hợp theo giờ (Consumer Group 1), lưu vào "database" (Consumer Group 2), hiển thị real-time dashboard (Consumer Group 3).</p>
+      </div></div>
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="card" style="text-align:center;padding:28px">
+    <div style="font-size:32px;margin-bottom:10px">🎓</div>
+    <h3 style="margin:0 0 8px;color:var(--text)">Hoàn thành bài giảng!</h3>
+    <p style="margin-bottom:16px">Sinh viên đã nắm được toàn bộ kiến thức về Message Queue từ khái niệm đến thực hành. Chúc các bạn áp dụng thành công vào các dự án thực tế!</p>
+    <div class="badge-row" style="justify-content:center">
+      <span class="tag tag-blue">Message Queue ✓</span>
+      <span class="tag tag-teal">Broker ✓</span>
+      <span class="tag tag-yellow">Topic ✓</span>
+      <span class="tag tag-green">Pub/Sub ✓</span>
+      <span class="tag tag-purple">Point-to-Point ✓</span>
+      <span class="tag tag-red">RabbitMQ Lab ✓</span>
+    </div>
+  </div>
+
+  <div class="nav-buttons">
+    <button class="btn btn-ghost" onclick="goto(5)">← Giờ 5</button>
+    <span style="font-size:13px;color:var(--green)">✓ Hoàn thành 6/6 giờ</span>
+    <button class="btn btn-primary" onclick="goto(0)">↩ Về trang đầu</button>
+  </div>
+</div>
+
+</main>
+
+<script>
+const sections = document.querySelectorAll('.section');
+const navItems = document.querySelectorAll('.nav-item');
+let current = 0;
+const TOTAL = sections.length;
+
+function goto(idx) {
+  sections[current].classList.remove('visible');
+  navItems[current].classList.remove('active');
+  current = idx;
+  sections[current].classList.add('visible');
+  navItems[current].classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  document.getElementById('main').scrollTop = 0;
+  updateProgress();
+}
+
+function updateProgress() {
+  const pct = Math.round((current / (TOTAL - 1)) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('prog-pct').textContent = pct + '%';
+}
+
+updateProgress();
+</script>
+</body>
+</html>
