@@ -1,0 +1,6 @@
+com\demo\p2p\config\RabbitMQConfig.class
+com\demo\p2p\consumer\TaskWorker1.class
+com\demo\p2p\producer\P2PController.class
+com\demo\p2p\consumer\HelloConsumer.class
+com\demo\p2p\consumer\TaskWorker2.class
+com\demo\p2p\DemoP2PApplication.class
