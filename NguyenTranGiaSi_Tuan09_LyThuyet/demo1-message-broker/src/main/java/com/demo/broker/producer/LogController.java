@@ -1,6 +1,7 @@
 package com.demo.broker.producer;
 
 import com.demo.broker.config.RabbitMQConfig;
+import com.demo.broker.service.MessageStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -32,9 +33,11 @@ public class LogController {
     private static final Set<String> VALID_LEVELS = Set.of("info", "warning", "error");
 
     private final RabbitTemplate rabbitTemplate;
+    private final MessageStore store;
 
-    public LogController(RabbitTemplate rabbitTemplate) {
+    public LogController(RabbitTemplate rabbitTemplate, MessageStore store) {
         this.rabbitTemplate = rabbitTemplate;
+        this.store = store;
     }
 
     /**
@@ -91,5 +94,28 @@ public class LogController {
                 "timestamp", LocalDateTime.now().toString(),
                 "forceFail", forceFail
         );
+    }
+
+    /**
+     * Xem tất cả message đã được consumer xử lý (mới nhất lên đầu).
+     * GET /api/broker/received
+     */
+    @GetMapping("/received")
+    public ResponseEntity<Map<String, Object>> getReceived() {
+        var messages = store.getAll();
+        return ResponseEntity.ok(Map.of(
+                "total", messages.size(),
+                "messages", messages
+        ));
+    }
+
+    /**
+     * Xóa lịch sử để test lại từ đầu.
+     * DELETE /api/broker/received/clear
+     */
+    @DeleteMapping("/received/clear")
+    public ResponseEntity<Map<String, Object>> clearReceived() {
+        store.clear();
+        return ResponseEntity.ok(Map.of("status", "cleared"));
     }
 }

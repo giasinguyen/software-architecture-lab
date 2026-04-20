@@ -1,6 +1,7 @@
 package com.demo.p2p.consumer;
 
 import com.demo.p2p.config.RabbitMQConfig;
+import com.demo.p2p.service.MessageStore;
 import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -20,6 +22,11 @@ import java.util.Map;
 public class HelloConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(HelloConsumer.class);
+    private final MessageStore store;
+
+    public HelloConsumer(MessageStore store) {
+        this.store = store;
+    }
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_HELLO)
     public void receiveHello(Map<String, Object> message,
@@ -33,5 +40,13 @@ public class HelloConsumer {
         channel.basicAck(deliveryTag, false);
         log.info("  ✓ ACK sent");
         log.info("══════════════════════════════════════════════════");
+
+        store.add(Map.of(
+                "consumer", "HelloConsumer",
+                "queue", RabbitMQConfig.QUEUE_HELLO,
+                "status", "processed (manual ACK)",
+                "receivedAt", LocalDateTime.now().toString(),
+                "data", message
+        ));
     }
 }

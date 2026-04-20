@@ -1,6 +1,7 @@
 package com.demo.p2p.consumer;
 
 import com.demo.p2p.config.RabbitMQConfig;
+import com.demo.p2p.service.MessageStore;
 import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
