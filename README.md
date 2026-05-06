@@ -1,4 +1,4 @@
-## 👤 Thông tin sinh viên
+## 👤 Thông tin sinh viên - IUH
 
 - **Họ và tên:** Nguyễn Trần Gia Sĩ  
 - **MSSV:** 22000715  
